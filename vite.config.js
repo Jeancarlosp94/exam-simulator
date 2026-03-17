@@ -3,5 +3,5 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: "https://github.com/Jeancarlosp94/exam-simulator"
+  base: "https://jeancarlosp94.github.io/exam-simulator/"
 })
