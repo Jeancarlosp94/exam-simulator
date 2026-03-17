@@ -10,17 +10,28 @@ const QuestionCard = ({
   isFirst,
   isLast,
 }) => {
+  const hasClinicalData =
+    question.caso_clinico ||
+    question.signos_vitales ||
+    question.laboratorio ||
+    question.imagen_descrita;
+
   return (
     <div className="bg-white rounded-xl shadow-lg p-6">
       <div className="flex justify-between items-start mb-6">
         <div className="flex-1">
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-3 mb-2 flex-wrap">
             <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm font-semibold">
               Pregunta {questionNumber}
             </span>
             {question.tema && (
               <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">
                 {question.tema}
+              </span>
+            )}
+            {question.dificultad && (
+              <span className="bg-amber-100 text-amber-600 px-3 py-1 rounded-full text-sm">
+                {question.dificultad}
               </span>
             )}
           </div>
@@ -50,6 +61,54 @@ const QuestionCard = ({
         </button>
       </div>
 
+      {hasClinicalData && (
+        <div className="space-y-4 mb-6 border border-gray-200 rounded-xl p-4 bg-gray-50 text-sm">
+          {question.caso_clinico && (
+            <div>
+              <h4 className="text-gray-700 font-semibold mb-1">Caso clínico</h4>
+              <p className="text-gray-800 leading-snug">
+                {question.caso_clinico}
+              </p>
+            </div>
+          )}
+          {question.signos_vitales && (
+            <div>
+              <h4 className="text-gray-700 font-semibold mb-1">
+                Signos vitales
+              </h4>
+              <div className="grid grid-cols-2 gap-2 text-gray-800">
+                {Object.entries(question.signos_vitales).map(([key, value]) => (
+                  <div key={key} className="text-xs">
+                    <span className="font-semibold uppercase tracking-wide text-gray-500">
+                      {key}:
+                    </span>{" "}
+                    {value}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {question.laboratorio && (
+            <div>
+              <h4 className="text-gray-700 font-semibold mb-1">Laboratorio</h4>
+              <p className="text-gray-800 leading-snug">
+                {question.laboratorio}
+              </p>
+            </div>
+          )}
+          {question.imagen_descrita && (
+            <div>
+              <h4 className="text-gray-700 font-semibold mb-1">
+                Imagen descrita
+              </h4>
+              <p className="text-gray-800 leading-snug">
+                {question.imagen_descrita}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="mb-6">
         <p className="text-lg text-gray-800 leading-relaxed">
           {question.pregunta}
@@ -57,7 +116,7 @@ const QuestionCard = ({
       </div>
 
       <div className="space-y-3 mb-6">
-        {question.opciones.map((opcion, index) => {
+        {question.opciones.map((opcion) => {
           const isSelected = selectedAnswer === opcion.label;
           return (
             <button
@@ -87,6 +146,59 @@ const QuestionCard = ({
           );
         })}
       </div>
+
+      {selectedAnswer && question.explicacion && (
+        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-xl mb-6 space-y-2 text-sm">
+          <div className="flex items-center gap-2">
+            <svg
+              className="w-5 h-5 text-blue-600"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <span className="font-semibold text-blue-900">
+              Explicación clínica
+            </span>
+          </div>
+          {question.explicacion.razonamiento && (
+            <p className="text-blue-800 leading-relaxed">
+              <span className="font-semibold text-sm text-blue-700">
+                Razonamiento:
+              </span>{" "}
+              {question.explicacion.razonamiento}
+            </p>
+          )}
+          {question.explicacion.diferencial && (
+            <p className="text-blue-800 leading-relaxed">
+              <span className="font-semibold text-sm text-blue-700">
+                Diferencial:
+              </span>{" "}
+              {question.explicacion.diferencial}
+            </p>
+          )}
+          {question.explicacion.por_que_no_las_otras && (
+            <p className="text-blue-800 leading-relaxed">
+              <span className="font-semibold text-sm text-blue-700">
+                Por qué no las otras:
+              </span>{" "}
+              {question.explicacion.por_que_no_las_otras}
+            </p>
+          )}
+          {question.explicacion.conducta_según_guias && (
+            <p className="text-blue-800 leading-relaxed">
+              <span className="font-semibold text-sm text-blue-700">
+                Conducta según guías:
+              </span>{" "}
+              {question.explicacion.conducta_según_guias}
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="flex justify-between pt-4 border-t">
         <button
