@@ -1,0 +1,197 @@
+[
+  {
+    "id": 1,
+    "tema": "Cardiología",
+    "pregunta": "¿Cuál es el tratamiento de primera línea para la hipertensión arterial no complicada en pacientes menores de 60 años?",
+    "opciones": [
+      "A) Diuréticos tiazídicos",
+      "B) Beta bloqueadores",
+      "C) Inhibidores de la ECA o ARA-II",
+      "D) Bloqueadores de canales de calcio"
+    ],
+    "correcta": "C) Inhibidores de la ECA o ARA-II",
+    "explicacion": "Para pacientes menores de 60 años sin complicaciones, los inhibidores de la ECA o ARA-II son primera línea según las guías JNC-8 y ESC/ESH."
+  },
+  {
+    "id": 2,
+    "tema": "Endocrinología",
+    "pregunta": "¿Cuál es el valor de HbA1c que se considera diagnóstico de diabetes mellitus?",
+    "opciones": [
+      "A) ≥ 5.7%",
+      "B) ≥ 6.0%",
+      "C) ≥ 6.5%",
+      "D) ≥ 7.0%"
+    ],
+    "correcta": "C) ≥ 6.5%",
+    "explicacion": "La ADA (American Diabetes Association) establece que una HbA1c ≥ 6.5% es diagnóstica de diabetes mellitus."
+  },
+  {
+    "id": 3,
+    "tema": "Neurología",
+    "pregunta": "En un paciente con sospecha de ACV isquémico agudo, ¿cuál es la ventana terapéutica para administrar trombolisis intravenosa?",
+    "opciones": [
+      "A) 2 horas",
+      "B) 3 horas",
+      "C) 4.5 horas",
+      "D) 6 horas"
+    ],
+    "correcta": "C) 4.5 horas",
+    "explicacion": "La ventana terapéutica estándar para trombolisis IV con alteplase es de 4.5 horas desde el inicio de los síntomas."
+  },
+  {
+    "id": 4,
+    "tema": "Infectología",
+    "pregunta": "¿Cuál es el tratamiento antibiótico de primera línea para la neumonía adquirida en la comunidad ambulatoria en un paciente sin comorbilidades?",
+    "opciones": [
+      "A) Amoxicilina",
+      "B) Azitromicina",
+      "C) Levofloxacino",
+      "D) Ceftriaxona"
+    ],
+    "correcta": "A) Amoxicilina",
+    "explicacion": "La amoxicilina es el tratamiento de primera línea para NAC sin comorbilidades según las guías IDSA/ATS."
+  },
+  {
+    "id": 5,
+    "tema": "Gastroenterología",
+    "pregunta": "¿Cuál es el signo ecográfico característico de la colecistitis aguda?",
+    "opciones": [
+      "A) Signo de Murphy ecográfico positivo",
+      "B) Engrosamiento de la pared vesicular > 3mm",
+      "C) Presencia de cálculos",
+      "D) Líquido pericolecístico"
+    ],
+    "correcta": "A) Signo de Murphy ecográfico positivo",
+    "explicacion": "El signo de Murphy ecográfico es el hallazgo más específico: dolor máximo al presionar con el transductor sobre la vesícula."
+  },
+  {
+    "id": 6,
+    "tema": "Nefrología",
+    "pregunta": "¿A partir de qué tasa de filtración glomerular se considera enfermedad renal crónica?",
+    "opciones": [
+      "A) < 90 mL/min/1.73m²",
+      "B) < 80 mL/min/1.73m²",
+      "C) < 70 mL/min/1.73m²",
+      "D) < 60 mL/min/1.73m²"
+    ],
+    "correcta": "D) < 60 mL/min/1.73m²",
+    "explicacion": "Se define ERC como TFG < 60 mL/min/1.73m² por más de 3 meses, o daño renal estructural independientemente de la TFG."
+  },
+  {
+    "id": 7,
+    "tema": "Reumatología",
+    "pregunta": "¿Cuál es el hallazgo de laboratorio más específico para el diagnóstico de lupus eritematoso sistémico?",
+    "opciones": [
+      "A) ANA positivo",
+      "B) Anti-DNA de doble cadena",
+      "C) Anti-Sm",
+      "D) Complemento bajo"
+    ],
+    "correcta": "C) Anti-Sm",
+    "explicacion": "Los anticuerpos anti-Sm son los más específicos para LES (98%), aunque solo están presentes en 30-40% de los casos."
+  },
+  {
+    "id": 8,
+    "tema": "Hematología",
+    "pregunta": "¿Cuál es el anticoagulante de elección durante el embarazo?",
+    "opciones": [
+      "A) Warfarina",
+      "B) Heparina no fraccionada",
+      "C) Heparina de bajo peso molecular",
+      "D) Apixabán"
+    ],
+    "correcta": "C) Heparina de bajo peso molecular",
+    "explicacion": "Las HBPM son el tratamiento de elección durante el embarazo por su seguridad, eficacia y facilidad de administración."
+  },
+  {
+    "id": 9,
+    "tema": "Dermatología",
+    "pregunta": "¿Cuál es el criterio ABCDE que NO corresponde a melanoma?",
+    "opciones": [
+      "A) Asimetría",
+      "B) Bordes irregulares",
+      "C) Color uniforme",
+      "D) Diámetro > 6mm"
+    ],
+    "correcta": "C) Color uniforme",
+    "explicacion": "El criterio C corresponde a Color VARIADO (no uniforme). La uniformidad de color sugiere benignidad."
+  },
+  {
+    "id": 10,
+    "tema": "Pediatría",
+    "pregunta": "¿A qué edad se administra la primera dosis de la vacuna triple viral (SRP)?",
+    "opciones": [
+      "A) 6 meses",
+      "B) 9 meses",
+      "C) 12 meses",
+      "D) 18 meses"
+    ],
+    "correcta": "C) 12 meses",
+    "explicacion": "La primera dosis de la vacuna triple viral (sarampión-rubéola-parotiditis) se administra a los 12 meses de edad."
+  },
+  {
+    "id": 11,
+    "tema": "Ginecología",
+    "pregunta": "¿Cuál es la causa más frecuente de sangrado uterino anormal en mujeres en edad reproductiva?",
+    "opciones": [
+      "A) Pólipos endometriales",
+      "B) Adenomiosis",
+      "C) Miomas uterinos",
+      "D) Disfunción ovulatoria"
+    ],
+    "correcta": "D) Disfunción ovulatoria",
+    "explicacion": "La disfunción ovulatoria es la causa más común de sangrado uterino anormal en mujeres en edad reproductiva (clasificación PALM-COEIN)."
+  },
+  {
+    "id": 12,
+    "tema": "Neumología",
+    "pregunta": "¿Cuál es el criterio espirométrico diagnóstico de EPOC?",
+    "opciones": [
+      "A) FEV1 < 80%",
+      "B) FEV1/FVC < 0.70 post-broncodilatador",
+      "C) FVC < 80%",
+      "D) Capacidad de difusión disminuida"
+    ],
+    "correcta": "B) FEV1/FVC < 0.70 post-broncodilatador",
+    "explicacion": "El diagnóstico de EPOC requiere una relación FEV1/FVC < 0.70 después de broncodilatador, según las guías GOLD."
+  },
+  {
+    "id": 13,
+    "tema": "Traumatología",
+    "pregunta": "¿Cuál es la fractura más común del carpo?",
+    "opciones": [
+      "A) Escafoides",
+      "B) Semilunar",
+      "C) Piramidal",
+      "D) Ganchoso"
+    ],
+    "correcta": "A) Escafoides",
+    "explicacion": "La fractura de escafoides representa el 60-70% de todas las fracturas del carpo, típicamente por caída con muñeca extendida."
+  },
+  {
+    "id": 14,
+    "tema": "Oftalmología",
+    "pregunta": "¿Cuál es el tratamiento inicial del glaucoma agudo de ángulo cerrado?",
+    "opciones": [
+      "A) Iridectomía quirúrgica inmediata",
+      "B) Tratamiento médico con hipotensores oculares",
+      "C) Observación y control",
+      "D) Láser YAG urgente"
+    ],
+    "correcta": "B) Tratamiento médico con hipotensores oculares",
+    "explicacion": "El tratamiento inicial es médico (acetazolamida, manitol, timolol, pilocarpina) para bajar la PIO, seguido de iridotomía láser."
+  },
+  {
+    "id": 15,
+    "tema": "Psiquiatría",
+    "pregunta": "¿Cuál es el tiempo mínimo de síntomas requerido para el diagnóstico de trastorno depresivo mayor?",
+    "opciones": [
+      "A) 1 semana",
+      "B) 2 semanas",
+      "C) 4 semanas",
+      "D) 6 semanas"
+    ],
+    "correcta": "B) 2 semanas",
+    "explicacion": "El DSM-5 requiere que los síntomas estén presentes durante al menos 2 semanas para diagnosticar un episodio depresivo mayor."
+  }
+]
