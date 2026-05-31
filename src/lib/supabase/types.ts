@@ -55,6 +55,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          id?: string;
           user_id: string;
           title: string;
           storage_path: string;
