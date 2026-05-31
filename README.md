@@ -14,7 +14,7 @@ App web que toma cualquier PDF, lo procesa con Claude y genera cuestionarios de 
 - **Stripe** suscripción (Sprint 7)
 - **Vercel** hosting
 
-## Estado actual: Sprint 2 — Auth Supabase + schema
+## Estado actual: Sprint 3 — Upload PDF + extracción
 
 - [x] Sprint 0: Scaffold Next.js 16 + TS estricto + Tailwind v4 + ESLint
 - [x] Sprint 0: Prettier + Husky pre-commit + lint-staged
@@ -24,8 +24,12 @@ App web que toma cualquier PDF, lo procesa con Claude y genera cuestionarios de 
 - [x] Sprint 2: Clientes Supabase (server, browser, edge proxy)
 - [x] Sprint 2: `/login` (magic link + Google OAuth) y `/auth/callback`
 - [x] Sprint 2: `/library` protegida (redirect a `/login` si no hay sesión)
+- [x] Sprint 3: Cliente service-role + rate limiter Upstash + chunker
+- [x] Sprint 3: `POST /api/pdf/extract` (descarga → unpdf → chunk → insert)
+- [x] Sprint 3: `/upload` con drag&drop directo a Storage (sin pasar por API)
+- [x] Sprint 3: `/library` lista documentos reales con badge de status
 
-El producto **aún no funciona end-to-end** — falta conectar a un Supabase real (ver siguiente sección).
+El producto **carga PDFs end-to-end** una vez conectes Supabase. Falta la generación de cuestionarios (Sprint 4) para que sea útil.
 
 ## Setup Supabase
 
@@ -69,7 +73,7 @@ Scripts disponibles:
 | 0      | Fundación (Next.js + TS + Tailwind + Prettier + Husky) ✅ |
 | 1      | Branding Quizen + componentes shadcn reutilizables ✅     |
 | 2      | Auth Supabase + schema Postgres + RLS ✅                  |
-| 3      | Upload PDF + extracción de texto (`/api/pdf/extract`)     |
+| 3      | Upload PDF + extracción de texto (`/api/pdf/extract`) ✅  |
 | 4      | Generación de quizzes con Claude (`/api/quiz/generate`)   |
 | 5      | Quiz player + grading (`/api/quiz/grade`)                 |
 | 6      | Tutor adaptativo + repetición espaciada                   |
