@@ -2,6 +2,7 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { NextResponse } from "next/server";
 
 import { DEFAULT_MODEL, getAnthropicClient } from "@/lib/anthropic";
+import { getUserPlan } from "@/lib/billing/plan";
 import { buildUserPrompt, SYSTEM_PROMPT } from "@/lib/quiz/prompts";
 import {
   GenerateQuizRequestSchema,
@@ -77,6 +78,23 @@ export async function POST(request: Request) {
     );
   }
   const { document_id, count, difficulty, title } = parsed.data;
+
+  // Plan gate — questions-per-quiz cap. Free: 20, Pro: 30. The Zod schema
+  // accepts up to 30; here we clamp to the user's plan to keep free users
+  // from hitting the hard ceiling.
+  const plan = await getUserPlan(user.id);
+  if (count > plan.limits.questionsPerQuiz) {
+    return NextResponse.json(
+      {
+        error: "plan_limit_exceeded",
+        detail: `Tu plan ${plan.plan} permite hasta ${plan.limits.questionsPerQuiz} preguntas por quiz.`,
+        limit: plan.limits.questionsPerQuiz,
+        requested: count,
+        plan: plan.plan,
+      },
+      { status: 402 },
+    );
+  }
 
   // 4. Verify ownership + status='ready' (service client bypasses RLS so we
   //    can read .user_id directly to enforce; manual check, not RLS).

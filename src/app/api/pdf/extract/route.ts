@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { extractText, getDocumentProxy } from "unpdf";
 
+import { countDocumentsThisMonth, getUserPlan } from "@/lib/billing/plan";
 import { chunkText } from "@/lib/pdf/chunk";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -39,8 +40,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  // 2. Rate limit (10 extractions/hour per user — enough for normal use,
-  //    not enough to burn through credits if someone scripts an attack).
+  // 2. Rate limit (10 extractions/hour per user — burst protection,
+  //    separate from the monthly plan cap below).
   const rateLimit = await checkRateLimit(
     { prefix: "pdf-extract", requests: 10, window: "1 h" },
     user.id,
@@ -55,6 +56,28 @@ export async function POST(request: Request) {
         status: 429,
         headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
       },
+    );
+  }
+
+  // 3. Plan gate — monthly document count. The document row was already
+  //    inserted by the client during upload; we check at extract time so
+  //    we don't waste an Anthropic-sized read on a doc we're going to
+  //    refuse to process. Free: 3/month, Pro: 30/month.
+  const plan = await getUserPlan(user.id);
+  const usedThisMonth = await countDocumentsThisMonth(user.id);
+  // The current document is already counted in usedThisMonth (it was
+  // inserted before this POST). Allow it through if usedThisMonth <= limit
+  // so the user can actually use their last allowed slot.
+  if (usedThisMonth > plan.limits.documentsPerMonth) {
+    return NextResponse.json(
+      {
+        error: "plan_limit_exceeded",
+        detail: `Tu plan ${plan.plan} permite ${plan.limits.documentsPerMonth} documentos al mes. Llevas ${usedThisMonth}.`,
+        limit: plan.limits.documentsPerMonth,
+        used: usedThisMonth,
+        plan: plan.plan,
+      },
+      { status: 402 },
     );
   }
 
