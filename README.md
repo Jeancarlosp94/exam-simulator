@@ -14,19 +14,21 @@ App web que toma cualquier PDF, lo procesa con Claude y genera cuestionarios de 
 - **Stripe** suscripción (Sprint 7)
 - **Vercel** hosting
 
-## Estado actual: Sprint 4 — Generación de quizzes con Claude
+## Estado actual: Sprint 5 — Quiz player + grading
 
 - [x] Sprint 0: Scaffold Next.js 16 + TS estricto + Tailwind v4 + ESLint
 - [x] Sprint 0: Prettier + Husky pre-commit + lint-staged
 - [x] Sprint 1: Branding Quizen + shadcn/ui + componentes porteados
 - [x] Sprint 2: Auth Supabase (magic link + Google) + schema + RLS + Storage
 - [x] Sprint 3: Upload PDF → Storage directo + `/api/pdf/extract` (unpdf + chunker)
-- [x] Sprint 4: Cliente Anthropic + schemas Zod + system prompt versionado
-- [x] Sprint 4: `POST /api/quiz/generate` con `claude-opus-4-7` + adaptive thinking + effort high
-- [x] Sprint 4: Prompt caching (system + documento) → ~90% descuento al regenerar
-- [x] Sprint 4: Dialog "Generar quiz" en `/library` (count 5-30, dificultad easy/mixed/hard)
+- [x] Sprint 4: `POST /api/quiz/generate` (claude-opus-4-7 + adaptive thinking + caching)
+- [x] Sprint 5: `/quiz/[id]` con auto-create/resume de attempt + Timer/Card/Grid integrados
+- [x] Sprint 5: Persistencia optimista de answers (upsert por question_id + flag)
+- [x] Sprint 5: `POST /api/quiz/grade` (idempotente) → score + tiempo + is_correct por answer
+- [x] Sprint 5: `/quiz/[id]/results` con stats + revisión filtrable (todas/correctas/incorrectas)
+- [x] Sprint 5: `/library` lista quizzes separado de documentos + highlight del recién generado
 
-El producto **genera quizzes end-to-end** una vez conectes Supabase + Anthropic. Falta jugarlos (Sprint 5).
+El producto está **completo en flujo principal**: subir PDF → generar quiz → jugar → ver resultados. Próximo: SRS (Sprint 6) + Stripe (Sprint 7).
 
 ## Setup Supabase
 
@@ -72,7 +74,7 @@ Scripts disponibles:
 | 2      | Auth Supabase + schema Postgres + RLS ✅                   |
 | 3      | Upload PDF + extracción de texto (`/api/pdf/extract`) ✅   |
 | 4      | Generación de quizzes con Claude (`/api/quiz/generate`) ✅ |
-| 5      | Quiz player + grading (`/api/quiz/grade`)                  |
+| 5      | Quiz player + grading (`/api/quiz/grade`) ✅               |
 | 6      | Tutor adaptativo + repetición espaciada                    |
 | 7      | Monetización Stripe                                        |
 | 8      | E2E tests + observabilidad + lanzamiento                   |
