@@ -14,21 +14,23 @@ App web que toma cualquier PDF, lo procesa con Claude y genera cuestionarios de 
 - **Stripe** suscripción (Sprint 7)
 - **Vercel** hosting
 
-## Estado actual: Sprint 5 — Quiz player + grading
+## Estado actual: Sprint 6 — Tutor adaptativo + repetición espaciada
 
 - [x] Sprint 0: Scaffold Next.js 16 + TS estricto + Tailwind v4 + ESLint
 - [x] Sprint 0: Prettier + Husky pre-commit + lint-staged
 - [x] Sprint 1: Branding Quizen + shadcn/ui + componentes porteados
 - [x] Sprint 2: Auth Supabase (magic link + Google) + schema + RLS + Storage
-- [x] Sprint 3: Upload PDF → Storage directo + `/api/pdf/extract` (unpdf + chunker)
+- [x] Sprint 3: Upload PDF + `/api/pdf/extract`
 - [x] Sprint 4: `POST /api/quiz/generate` (claude-opus-4-7 + adaptive thinking + caching)
-- [x] Sprint 5: `/quiz/[id]` con auto-create/resume de attempt + Timer/Card/Grid integrados
-- [x] Sprint 5: Persistencia optimista de answers (upsert por question_id + flag)
-- [x] Sprint 5: `POST /api/quiz/grade` (idempotente) → score + tiempo + is_correct por answer
-- [x] Sprint 5: `/quiz/[id]/results` con stats + revisión filtrable (todas/correctas/incorrectas)
-- [x] Sprint 5: `/library` lista quizzes separado de documentos + highlight del recién generado
+- [x] Sprint 5: Quiz player + `/api/quiz/grade` + página de resultados
+- [x] Sprint 6: SM-2 puro en `lib/srs/sm2.ts` + tests-friendly (recibe `now`)
+- [x] Sprint 6: `/api/quiz/grade` ahora upserta cards SRS (correct→quality 5, incorrect→1)
+- [x] Sprint 6: `POST /api/tutor/chat` streaming socrático con prompt caching del contexto
+- [x] Sprint 6: `TutorDialog` con chat streaming en `/quiz/[id]/results` (preguntas incorrectas)
+- [x] Sprint 6: `/review` con cola de cards due + `ReviewPlayer` + `POST /api/review/answer`
+- [x] Sprint 6: Callout "Repaso pendiente" en `/library` con count de cards due
 
-El producto está **completo en flujo principal**: subir PDF → generar quiz → jugar → ver resultados. Próximo: SRS (Sprint 6) + Stripe (Sprint 7).
+El producto tiene el **loop completo de retención**: estudias, fallas, repasas, retienes. Próximo: Stripe (Sprint 7).
 
 ## Setup Supabase
 
@@ -75,7 +77,7 @@ Scripts disponibles:
 | 3      | Upload PDF + extracción de texto (`/api/pdf/extract`) ✅   |
 | 4      | Generación de quizzes con Claude (`/api/quiz/generate`) ✅ |
 | 5      | Quiz player + grading (`/api/quiz/grade`) ✅               |
-| 6      | Tutor adaptativo + repetición espaciada                    |
+| 6      | Tutor adaptativo + repetición espaciada ✅                 |
 | 7      | Monetización Stripe                                        |
 | 8      | E2E tests + observabilidad + lanzamiento                   |
 
