@@ -13,15 +13,17 @@ import {
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { PortalButton } from "@/components/billing/portal-button";
 import { GenerateQuizDialog } from "@/components/quiz/generate-quiz-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { countDocumentsThisMonth, getUserPlan } from "@/lib/billing/plan";
 import { cn } from "@/lib/utils";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 
-type SearchParams = { quiz?: string };
+type SearchParams = { quiz?: string; upgraded?: string };
 
 type DocumentStatus = "uploading" | "extracting" | "ready" | "failed";
 
@@ -74,7 +76,7 @@ export default async function LibraryPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const { quiz: highlightedQuizId } = await searchParams;
+  const { quiz: highlightedQuizId, upgraded } = await searchParams;
 
   const supabase = await createSupabaseServerClient();
   const {
@@ -85,15 +87,14 @@ export default async function LibraryPage({
     redirect("/login");
   }
 
-  // Documents, quizzes, and due SRS cards in parallel — independent queries.
-  // RLS scopes documents/quizzes; due-count uses the service client because
-  // we only need the COUNT, not the rows, and srs_cards joins through
-  // questions for visibility which is faster with service.
+  // Documents, quizzes, due SRS cards, plan, and monthly usage in parallel.
   const service = getSupabaseServiceClient();
   const [
     { data: documents, error: docsError },
     { data: quizzes, error: quizzesError },
     { count: dueCount },
+    plan,
+    docsUsedThisMonth,
   ] = await Promise.all([
     supabase
       .from("documents")
@@ -110,6 +111,8 @@ export default async function LibraryPage({
       .select("id", { count: "exact", head: true })
       .eq("user_id", user.id)
       .lte("next_review_at", new Date().toISOString()),
+    getUserPlan(user.id),
+    countDocumentsThisMonth(user.id),
   ]);
 
   if (docsError) {
@@ -135,6 +138,58 @@ export default async function LibraryPage({
           Subir PDF
         </Link>
       </header>
+
+      {/* ── Upgrade success banner (one-shot from Stripe success_url) ───── */}
+      {upgraded === "1" && plan.plan === "pro" && (
+        <Card className="border-primary/40 bg-primary/10">
+          <CardContent className="flex items-center gap-3 py-4">
+            <Sparkles className="size-5 text-primary" />
+            <p className="text-sm">
+              ¡Bienvenido a Quizen Pro! Tus límites se actualizaron.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Plan + usage strip ─────────────────────────────────────────── */}
+      <Card>
+        <CardContent className="flex flex-wrap items-center justify-between gap-4 py-4">
+          <div className="flex items-center gap-3">
+            <Badge
+              variant="outline"
+              className={cn(
+                plan.plan === "pro"
+                  ? "border-primary/40 bg-primary/10 text-primary"
+                  : "border-border bg-card/40",
+              )}
+            >
+              {plan.plan === "pro" ? (
+                <>
+                  <Sparkles className="size-3" />
+                  Pro
+                </>
+              ) : (
+                "Free"
+              )}
+            </Badge>
+            <p className="text-sm text-muted-foreground">
+              {docsUsedThisMonth} de {plan.limits.documentsPerMonth} PDFs este
+              mes
+            </p>
+          </div>
+          {plan.plan === "free" ? (
+            <Link
+              href="/pricing"
+              className={cn(buttonVariants({ size: "sm" }))}
+            >
+              <Sparkles />
+              Pasar a Pro
+            </Link>
+          ) : (
+            <PortalButton size="sm" />
+          )}
+        </CardContent>
+      </Card>
 
       {/* ── Repaso pendiente callout ───────────────────────────────────── */}
       {dueCount != null && dueCount > 0 && (
