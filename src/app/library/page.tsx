@@ -1,5 +1,6 @@
 import {
   AlertCircle,
+  Brain,
   CheckCircle2,
   Clock,
   FileText,
@@ -18,6 +19,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getSupabaseServiceClient } from "@/lib/supabase/service";
 
 type SearchParams = { quiz?: string };
 
@@ -83,10 +85,15 @@ export default async function LibraryPage({
     redirect("/login");
   }
 
-  // Documents and quizzes in parallel — independent queries, RLS scopes both.
+  // Documents, quizzes, and due SRS cards in parallel — independent queries.
+  // RLS scopes documents/quizzes; due-count uses the service client because
+  // we only need the COUNT, not the rows, and srs_cards joins through
+  // questions for visibility which is faster with service.
+  const service = getSupabaseServiceClient();
   const [
     { data: documents, error: docsError },
     { data: quizzes, error: quizzesError },
+    { count: dueCount },
   ] = await Promise.all([
     supabase
       .from("documents")
@@ -98,6 +105,11 @@ export default async function LibraryPage({
       .from("quizzes")
       .select("id, title, difficulty, question_count, created_at, document_id")
       .order("created_at", { ascending: false }),
+    service
+      .from("srs_cards")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .lte("next_review_at", new Date().toISOString()),
   ]);
 
   if (docsError) {
@@ -123,6 +135,29 @@ export default async function LibraryPage({
           Subir PDF
         </Link>
       </header>
+
+      {/* ── Repaso pendiente callout ───────────────────────────────────── */}
+      {dueCount != null && dueCount > 0 && (
+        <Card className="border-primary/40 bg-primary/5">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                <Brain className="size-5" />
+              </div>
+              <div className="flex flex-col">
+                <h2 className="text-sm font-medium">Repaso pendiente</h2>
+                <p className="text-xs text-muted-foreground">
+                  Tienes {dueCount} {dueCount === 1 ? "pregunta" : "preguntas"}{" "}
+                  listas para repasar.
+                </p>
+              </div>
+            </div>
+            <Link href="/review" className={cn(buttonVariants({ size: "sm" }))}>
+              Repasar ahora
+            </Link>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ── Quizzes section ────────────────────────────────────────────── */}
       <section className="flex flex-col gap-3">
