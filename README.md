@@ -14,18 +14,21 @@ App web que toma cualquier PDF, lo procesa con Claude y genera cuestionarios de 
 - **Stripe** suscripción (Sprint 7)
 - **Vercel** hosting
 
-## Estado actual: Sprint 7 — Monetización Stripe
+## Estado actual: Sprint 8 — E2E tests + observabilidad + lanzamiento ✅
+
+Todos los sprints del roadmap completados. Quizen está listo para lanzar.
 
 - [x] Sprint 0-5: Fundación + auth + upload + generación + player + grading
 - [x] Sprint 6: SM-2 SRS + tutor socrático streaming
-- [x] Sprint 7: `lib/billing/plan.ts` con definiciones Free/Pro y `getUserPlan`
-- [x] Sprint 7: `POST /api/stripe/checkout` con `client_reference_id` + metadata
-- [x] Sprint 7: `POST /api/stripe/portal` para gestión self-service
-- [x] Sprint 7: `POST /api/stripe/webhook` con verificación de firma + sync a `subscriptions`
-- [x] Sprint 7: Plan gating en `/api/pdf/extract` (docs/mes) y `/api/quiz/generate` (count cap)
-- [x] Sprint 7: `/pricing` con tiers Free/Pro + `/library` con plan strip y portal
+- [x] Sprint 7: Stripe (checkout + portal + webhook) + plan gating
+- [x] Sprint 8: Vitest config + tests para SM-2 y chunker (17 tests, todos verdes)
+- [x] Sprint 8: Playwright config + smoke specs (landing/login/pricing + auth gates)
+- [x] Sprint 8: GitHub Actions CI (format + lint + typecheck + unit tests + build)
+- [x] Sprint 8: Sentry (browser + server + edge) con `instrumentation.ts`
+- [x] Sprint 8: PostHog `analytics.ts` server-side con `track()` + `flushAnalytics()`
+- [x] Sprint 8: SEO — `sitemap.ts`, `robots.ts`, OpenGraph + Twitter Cards
 
-El producto es **monetizable end-to-end**. Solo falta observabilidad + lanzamiento (Sprint 8).
+**Stack runtime**: ver checklist abajo.
 
 ### Planes
 
@@ -85,6 +88,98 @@ Scripts disponibles:
 - `npm run lint` — ESLint
 - `npm run format` — Prettier
 - `npm run typecheck` — `tsc --noEmit`
+- `npm test` — Vitest (unit tests, ~17 tests, <500ms)
+- `npm run test:watch` — Vitest en watch mode
+- `npm run test:e2e` — Playwright (requiere `npx playwright install chromium` y `npm run dev` corriendo)
+
+## Despliegue a producción
+
+### 1. Vercel
+
+```bash
+npm i -g vercel
+vercel link            # vincula el repo al proyecto
+vercel env pull        # opcional: trae las env vars del proyecto
+vercel --prod          # deploy
+```
+
+Hosting recomendado por razones técnicas concretas:
+
+- Soporte nativo de Next.js 16 + App Router + Turbopack.
+- Edge functions para el `proxy.ts` de Supabase auth refresh.
+- Body limits configurables para `/api/quiz/generate` (necesita ~30s).
+- `maxDuration` por route handler honrado del plan Pro en adelante.
+
+### 2. Variables de entorno en producción
+
+Configura en Vercel → Project Settings → Environment Variables (todas como **Production** + **Preview**):
+
+| Variable                             | Origen                                                              |
+| ------------------------------------ | ------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`           | Supabase Project Settings → API                                     |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`      | Supabase Project Settings → API                                     |
+| `SUPABASE_SERVICE_ROLE_KEY`          | Supabase Project Settings → API (server-only)                       |
+| `ANTHROPIC_API_KEY`                  | console.anthropic.com/settings/keys                                 |
+| `ANTHROPIC_MODEL`                    | `claude-opus-4-7` (override solo si quieres cambiar a Sonnet/Haiku) |
+| `STRIPE_SECRET_KEY`                  | Stripe Dashboard → Developers → API keys (live mode)                |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe live publishable                                             |
+| `STRIPE_WEBHOOK_SECRET`              | Generado al crear el endpoint en Stripe Dashboard                   |
+| `STRIPE_PRICE_ID_PRO_MONTHLY`        | El `price_...` del producto Pro en live mode                        |
+| `UPSTASH_REDIS_REST_URL`             | console.upstash.com — para rate limiting real                       |
+| `UPSTASH_REDIS_REST_TOKEN`           | mismo lugar                                                         |
+| `NEXT_PUBLIC_APP_URL`                | Tu dominio de producción (e.g. `https://quizen.app`)                |
+| `RESEND_API_KEY`                     | Para SMTP de magic links de Supabase                                |
+| `NEXT_PUBLIC_SENTRY_DSN`             | sentry.io — opcional, captura solo si está seteado                  |
+| `SENTRY_DSN`                         | Sentry server DSN (puede ser el mismo que el browser)               |
+| `POSTHOG_KEY`                        | posthog.com — opcional                                              |
+| `NEXT_PUBLIC_POSTHOG_HOST`           | `https://us.i.posthog.com` (o `eu.i.posthog.com`)                   |
+
+### 3. Stripe webhook en producción
+
+1. Dashboard de Stripe → Developers → Webhooks → Add endpoint
+2. URL: `https://<tu-dominio>/api/stripe/webhook`
+3. Eventos a suscribir:
+   - `checkout.session.completed`
+   - `customer.subscription.created`
+   - `customer.subscription.updated`
+   - `customer.subscription.deleted`
+4. Copia el `whsec_...` → `STRIPE_WEBHOOK_SECRET` en Vercel.
+
+### 4. Pre-launch checklist
+
+- [ ] Supabase: las 3 migraciones aplicadas en producción
+- [ ] Supabase: Google OAuth configurado con redirect URI correcto
+- [ ] Supabase: SMTP de Resend configurado en Auth → SMTP
+- [ ] Supabase: verificar RLS habilitada en TODAS las tablas (`select * from pg_tables where rls_enabled = false and schemaname = 'public'` debe estar vacío)
+- [ ] Supabase: bucket `documents` privado (Storage → documents → Settings → Public = OFF)
+- [ ] Stripe: producto Pro creado en LIVE mode (no test)
+- [ ] Stripe: webhook endpoint registrado con los 4 eventos
+- [ ] Anthropic: saldo suficiente en la cuenta (~$50 cubre ~50 usuarios activos un mes)
+- [ ] Vercel: dominio custom apuntando + SSL activo
+- [ ] Vercel: todas las env vars en Production
+- [ ] Sentry: proyecto creado, DSN configurado (opcional pero recomendado)
+- [ ] PostHog: workspace creado, key configurada (opcional)
+- [ ] DNS: redirect de `www.` a apex (o viceversa)
+- [ ] Probar el flujo end-to-end con un usuario real
+- [ ] Probar checkout con tarjeta real ($9 → cancelar inmediatamente desde portal)
+- [ ] Verificar que el rate limit de `/api/pdf/extract` y `/api/quiz/generate` funciona (Upstash dashboard)
+- [ ] Términos de uso + Política de privacidad publicados (no incluidos en este repo — son legales, no técnicos)
+
+### 5. Observabilidad
+
+- **Errores**: Sentry captura unhandled errors browser + server. Configurado con sample rate 10% para perf traces, 100% replays-on-error.
+- **Eventos**: PostHog `track()` se llama desde route handlers (`signed_up`, `document.uploaded`, `quiz.generated`, etc.). Llama `flushAnalytics()` antes de retornar en route handlers críticos para no perder eventos.
+- **Tokens Anthropic**: cada quiz guarda `generation_tokens_input/output/cached` en `public.quizzes`. Query para ver costo aproximado:
+  ```sql
+  SELECT
+    date_trunc('day', created_at) AS day,
+    SUM(generation_tokens_input) * 5.0 / 1e6 AS input_cost_usd,
+    SUM(generation_tokens_output) * 25.0 / 1e6 AS output_cost_usd,
+    SUM(generation_cached_tokens) * 0.5 / 1e6 AS cached_cost_usd
+  FROM quizzes
+  WHERE generation_model = 'claude-opus-4-7'
+  GROUP BY 1 ORDER BY 1 DESC;
+  ```
 
 ## Roadmap
 
@@ -98,7 +193,7 @@ Scripts disponibles:
 | 5      | Quiz player + grading (`/api/quiz/grade`) ✅               |
 | 6      | Tutor adaptativo + repetición espaciada ✅                 |
 | 7      | Monetización Stripe ✅                                     |
-| 8      | E2E tests + observabilidad + lanzamiento                   |
+| 8      | E2E tests + observabilidad + lanzamiento ✅                |
 
 ## Historia
 
