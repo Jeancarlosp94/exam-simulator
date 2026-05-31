@@ -14,14 +14,36 @@ App web que toma cualquier PDF, lo procesa con Claude y genera cuestionarios de 
 - **Stripe** suscripción (Sprint 7)
 - **Vercel** hosting
 
-## Estado actual: Sprint 0 — Fundación
+## Estado actual: Sprint 2 — Auth Supabase + schema
 
-- [x] Scaffold Next.js 16 + TS estricto + Tailwind v4 + ESLint flat config
-- [x] Prettier + Husky pre-commit + lint-staged
-- [x] `.env.example` con todas las claves esperadas
-- [x] Estructura base lista para Sprint 1 (branding + componentes reutilizables)
+- [x] Sprint 0: Scaffold Next.js 16 + TS estricto + Tailwind v4 + ESLint
+- [x] Sprint 0: Prettier + Husky pre-commit + lint-staged
+- [x] Sprint 1: Branding Quizen (paleta teal/zen oklch, dark-first)
+- [x] Sprint 1: shadcn/ui base + componentes legacy porteados a TS
+- [x] Sprint 2: Migraciones SQL (schema + RLS + Storage bucket)
+- [x] Sprint 2: Clientes Supabase (server, browser, edge proxy)
+- [x] Sprint 2: `/login` (magic link + Google OAuth) y `/auth/callback`
+- [x] Sprint 2: `/library` protegida (redirect a `/login` si no hay sesión)
 
-El producto **aún no funciona** — esto es solo el cimiento.
+El producto **aún no funciona end-to-end** — falta conectar a un Supabase real (ver siguiente sección).
+
+## Setup Supabase
+
+1. Crea un proyecto en [supabase.com/dashboard](https://supabase.com/dashboard).
+2. Copia `.env.example` a `.env.local` y completa:
+   - `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` (Project Settings → API)
+   - `SUPABASE_SERVICE_ROLE_KEY` (mismo lugar; NUNCA expongas esto al cliente)
+3. Aplica las migraciones de [supabase/migrations/](supabase/migrations/). Dos opciones:
+   - **Dashboard**: pega el contenido de cada archivo en SQL Editor en orden numérico
+   - **Supabase CLI**: `supabase link --project-ref <ref> && supabase db push`
+4. **Habilita el provider de Google** en Authentication → Providers → Google
+   (necesitas un OAuth client ID/secret en Google Cloud Console; redirect URI:
+   `https://<tu-proyecto>.supabase.co/auth/v1/callback`).
+5. **Configura el SMTP de magic links** en Authentication → SMTP Settings.
+   Recomendado: Resend (`smtp.resend.com:587`, usuario `resend`, password = API key).
+   El email default de Supabase tiene rate limit estricto y no sirve en producción.
+6. Verifica RLS con el inspector de Supabase (Database → Policies).
+   Cada tabla debe mostrar "Row Level Security: enabled" y al menos una policy por operación.
 
 ## Desarrollo
 
@@ -45,8 +67,8 @@ Scripts disponibles:
 | Sprint | Entregable                                                |
 | ------ | --------------------------------------------------------- |
 | 0      | Fundación (Next.js + TS + Tailwind + Prettier + Husky) ✅ |
-| 1      | Branding Quizen + componentes shadcn reutilizables        |
-| 2      | Auth Supabase + schema Postgres + RLS                     |
+| 1      | Branding Quizen + componentes shadcn reutilizables ✅     |
+| 2      | Auth Supabase + schema Postgres + RLS ✅                  |
 | 3      | Upload PDF + extracción de texto (`/api/pdf/extract`)     |
 | 4      | Generación de quizzes con Claude (`/api/quiz/generate`)   |
 | 5      | Quiz player + grading (`/api/quiz/grade`)                 |
