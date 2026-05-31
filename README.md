@@ -14,22 +14,19 @@ App web que toma cualquier PDF, lo procesa con Claude y genera cuestionarios de 
 - **Stripe** suscripción (Sprint 7)
 - **Vercel** hosting
 
-## Estado actual: Sprint 3 — Upload PDF + extracción
+## Estado actual: Sprint 4 — Generación de quizzes con Claude
 
 - [x] Sprint 0: Scaffold Next.js 16 + TS estricto + Tailwind v4 + ESLint
 - [x] Sprint 0: Prettier + Husky pre-commit + lint-staged
-- [x] Sprint 1: Branding Quizen (paleta teal/zen oklch, dark-first)
-- [x] Sprint 1: shadcn/ui base + componentes legacy porteados a TS
-- [x] Sprint 2: Migraciones SQL (schema + RLS + Storage bucket)
-- [x] Sprint 2: Clientes Supabase (server, browser, edge proxy)
-- [x] Sprint 2: `/login` (magic link + Google OAuth) y `/auth/callback`
-- [x] Sprint 2: `/library` protegida (redirect a `/login` si no hay sesión)
-- [x] Sprint 3: Cliente service-role + rate limiter Upstash + chunker
-- [x] Sprint 3: `POST /api/pdf/extract` (descarga → unpdf → chunk → insert)
-- [x] Sprint 3: `/upload` con drag&drop directo a Storage (sin pasar por API)
-- [x] Sprint 3: `/library` lista documentos reales con badge de status
+- [x] Sprint 1: Branding Quizen + shadcn/ui + componentes porteados
+- [x] Sprint 2: Auth Supabase (magic link + Google) + schema + RLS + Storage
+- [x] Sprint 3: Upload PDF → Storage directo + `/api/pdf/extract` (unpdf + chunker)
+- [x] Sprint 4: Cliente Anthropic + schemas Zod + system prompt versionado
+- [x] Sprint 4: `POST /api/quiz/generate` con `claude-opus-4-7` + adaptive thinking + effort high
+- [x] Sprint 4: Prompt caching (system + documento) → ~90% descuento al regenerar
+- [x] Sprint 4: Dialog "Generar quiz" en `/library` (count 5-30, dificultad easy/mixed/hard)
 
-El producto **carga PDFs end-to-end** una vez conectes Supabase. Falta la generación de cuestionarios (Sprint 4) para que sea útil.
+El producto **genera quizzes end-to-end** una vez conectes Supabase + Anthropic. Falta jugarlos (Sprint 5).
 
 ## Setup Supabase
 
@@ -68,17 +65,17 @@ Scripts disponibles:
 
 ## Roadmap
 
-| Sprint | Entregable                                                |
-| ------ | --------------------------------------------------------- |
-| 0      | Fundación (Next.js + TS + Tailwind + Prettier + Husky) ✅ |
-| 1      | Branding Quizen + componentes shadcn reutilizables ✅     |
-| 2      | Auth Supabase + schema Postgres + RLS ✅                  |
-| 3      | Upload PDF + extracción de texto (`/api/pdf/extract`) ✅  |
-| 4      | Generación de quizzes con Claude (`/api/quiz/generate`)   |
-| 5      | Quiz player + grading (`/api/quiz/grade`)                 |
-| 6      | Tutor adaptativo + repetición espaciada                   |
-| 7      | Monetización Stripe                                       |
-| 8      | E2E tests + observabilidad + lanzamiento                  |
+| Sprint | Entregable                                                 |
+| ------ | ---------------------------------------------------------- |
+| 0      | Fundación (Next.js + TS + Tailwind + Prettier + Husky) ✅  |
+| 1      | Branding Quizen + componentes shadcn reutilizables ✅      |
+| 2      | Auth Supabase + schema Postgres + RLS ✅                   |
+| 3      | Upload PDF + extracción de texto (`/api/pdf/extract`) ✅   |
+| 4      | Generación de quizzes con Claude (`/api/quiz/generate`) ✅ |
+| 5      | Quiz player + grading (`/api/quiz/grade`)                  |
+| 6      | Tutor adaptativo + repetición espaciada                    |
+| 7      | Monetización Stripe                                        |
+| 8      | E2E tests + observabilidad + lanzamiento                   |
 
 ## Historia
 
