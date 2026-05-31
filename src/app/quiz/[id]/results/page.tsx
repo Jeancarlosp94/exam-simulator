@@ -1,11 +1,12 @@
-import { CheckCircle2, Clock, Sparkles, XCircle } from "lucide-react";
+import { Brain, CheckCircle2, Clock, Sparkles, XCircle } from "lucide-react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { ResultsFilter } from "@/components/quiz/results-filter";
+import { TutorDialog } from "@/components/quiz/tutor-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
@@ -301,6 +302,22 @@ export default async function QuizResultsPage({
                         <p className="text-sm leading-relaxed">
                           {q.explanation}
                         </p>
+                      </div>
+                    )}
+
+                    {!isCorrect && (
+                      <div className="flex justify-end">
+                        <TutorDialog
+                          questionId={q.id}
+                          attemptId={attempt.id}
+                          questionPrompt={q.prompt}
+                          trigger={
+                            <Button variant="outline" size="sm">
+                              <Brain />
+                              Pregúntale a Quizen
+                            </Button>
+                          }
+                        />
                       </div>
                     )}
                   </CardContent>
