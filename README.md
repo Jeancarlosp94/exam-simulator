@@ -14,23 +14,42 @@ App web que toma cualquier PDF, lo procesa con Claude y genera cuestionarios de 
 - **Stripe** suscripción (Sprint 7)
 - **Vercel** hosting
 
-## Estado actual: Sprint 6 — Tutor adaptativo + repetición espaciada
+## Estado actual: Sprint 7 — Monetización Stripe
 
-- [x] Sprint 0: Scaffold Next.js 16 + TS estricto + Tailwind v4 + ESLint
-- [x] Sprint 0: Prettier + Husky pre-commit + lint-staged
-- [x] Sprint 1: Branding Quizen + shadcn/ui + componentes porteados
-- [x] Sprint 2: Auth Supabase (magic link + Google) + schema + RLS + Storage
-- [x] Sprint 3: Upload PDF + `/api/pdf/extract`
-- [x] Sprint 4: `POST /api/quiz/generate` (claude-opus-4-7 + adaptive thinking + caching)
-- [x] Sprint 5: Quiz player + `/api/quiz/grade` + página de resultados
-- [x] Sprint 6: SM-2 puro en `lib/srs/sm2.ts` + tests-friendly (recibe `now`)
-- [x] Sprint 6: `/api/quiz/grade` ahora upserta cards SRS (correct→quality 5, incorrect→1)
-- [x] Sprint 6: `POST /api/tutor/chat` streaming socrático con prompt caching del contexto
-- [x] Sprint 6: `TutorDialog` con chat streaming en `/quiz/[id]/results` (preguntas incorrectas)
-- [x] Sprint 6: `/review` con cola de cards due + `ReviewPlayer` + `POST /api/review/answer`
-- [x] Sprint 6: Callout "Repaso pendiente" en `/library` con count de cards due
+- [x] Sprint 0-5: Fundación + auth + upload + generación + player + grading
+- [x] Sprint 6: SM-2 SRS + tutor socrático streaming
+- [x] Sprint 7: `lib/billing/plan.ts` con definiciones Free/Pro y `getUserPlan`
+- [x] Sprint 7: `POST /api/stripe/checkout` con `client_reference_id` + metadata
+- [x] Sprint 7: `POST /api/stripe/portal` para gestión self-service
+- [x] Sprint 7: `POST /api/stripe/webhook` con verificación de firma + sync a `subscriptions`
+- [x] Sprint 7: Plan gating en `/api/pdf/extract` (docs/mes) y `/api/quiz/generate` (count cap)
+- [x] Sprint 7: `/pricing` con tiers Free/Pro + `/library` con plan strip y portal
 
-El producto tiene el **loop completo de retención**: estudias, fallas, repasas, retienes. Próximo: Stripe (Sprint 7).
+El producto es **monetizable end-to-end**. Solo falta observabilidad + lanzamiento (Sprint 8).
+
+### Planes
+
+| Plan | Precio | PDFs/mes | Preguntas/quiz |
+| ---- | ------ | -------- | -------------- |
+| Free | $0     | 3        | 20             |
+| Pro  | $9/mes | 30       | 30             |
+
+Free es el default implícito — un usuario sin row en `public.subscriptions` se trata como Free. La row solo se crea cuando el webhook confirma el checkout.
+
+## Setup Stripe
+
+1. Crea un proyecto en [dashboard.stripe.com](https://dashboard.stripe.com) (test mode primero).
+2. Crea un Producto "Quizen Pro" con un Price recurring mensual ($9 USD o lo que decidas). Copia el `price_...` ID.
+3. Completa en `.env.local`:
+   - `STRIPE_SECRET_KEY` (sk*test*... para test)
+   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (pk*test*... — reservado para futuras integraciones cliente)
+   - `STRIPE_PRICE_ID_PRO_MONTHLY=<price_id>`
+4. Para webhooks en local: instala [Stripe CLI](https://stripe.com/docs/stripe-cli) y corre:
+   ```bash
+   stripe listen --forward-to localhost:3000/api/stripe/webhook
+   ```
+   Copia el `whsec_...` que imprime a `STRIPE_WEBHOOK_SECRET` en `.env.local`.
+5. En producción: agrega el endpoint `<tu-dominio>/api/stripe/webhook` en Stripe Dashboard → Developers → Webhooks, suscríbete a `checkout.session.completed`, `customer.subscription.{created,updated,deleted}`, copia el signing secret.
 
 ## Setup Supabase
 
@@ -78,7 +97,7 @@ Scripts disponibles:
 | 4      | Generación de quizzes con Claude (`/api/quiz/generate`) ✅ |
 | 5      | Quiz player + grading (`/api/quiz/grade`) ✅               |
 | 6      | Tutor adaptativo + repetición espaciada ✅                 |
-| 7      | Monetización Stripe                                        |
+| 7      | Monetización Stripe ✅                                     |
 | 8      | E2E tests + observabilidad + lanzamiento                   |
 
 ## Historia
