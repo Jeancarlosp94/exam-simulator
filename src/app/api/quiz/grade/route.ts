@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { applySm2, qualityFromCorrectness } from "@/lib/srs/sm2";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -100,6 +101,7 @@ export async function POST(request: Request) {
   for (const q of questions) correctByQuestionId.set(q.id, q.correct_label);
 
   let scoreCorrect = 0;
+  const gradedAnswers: Array<{ question_id: string; isCorrect: boolean }> = [];
 
   // Walk answers, compute is_correct, update the row. We do these in
   // parallel because they're independent and the worst-case set is ~30 rows.
@@ -109,12 +111,67 @@ export async function POST(request: Request) {
       const isCorrect =
         a.selected_label != null && a.selected_label === correctLabel;
       if (isCorrect) scoreCorrect += 1;
+      if (a.selected_label != null) {
+        gradedAnswers.push({ question_id: a.question_id, isCorrect });
+      }
       await service
         .from("answers")
         .update({ is_correct: isCorrect })
         .eq("id", a.id);
     }),
   );
+
+  // Upsert SRS cards for every ANSWERED question. We skip unanswered
+  // ones — a skipped question isn't a recall failure, the user just
+  // didn't get to it. Pre-load existing cards so SM-2 can pick up where
+  // it left off across retakes of the same quiz.
+  if (gradedAnswers.length > 0) {
+    const questionIds = gradedAnswers.map((g) => g.question_id);
+    const { data: existingCards } = await service
+      .from("srs_cards")
+      .select("question_id, ease_factor, interval_days, repetitions")
+      .eq("user_id", user.id)
+      .in("question_id", questionIds);
+
+    const existingByQ = new Map<
+      string,
+      { ease_factor: number; interval_days: number; repetitions: number }
+    >();
+    for (const c of existingCards ?? []) {
+      existingByQ.set(c.question_id, {
+        ease_factor: c.ease_factor,
+        interval_days: c.interval_days,
+        repetitions: c.repetitions,
+      });
+    }
+
+    const now = new Date();
+    const cardRows = gradedAnswers.map(({ question_id, isCorrect }) => {
+      const next = applySm2(
+        existingByQ.get(question_id) ?? null,
+        qualityFromCorrectness(isCorrect),
+        now,
+      );
+      return {
+        user_id: user.id,
+        question_id,
+        ease_factor: next.ease_factor,
+        interval_days: next.interval_days,
+        repetitions: next.repetitions,
+        next_review_at: next.next_review_at,
+        last_reviewed_at: next.last_reviewed_at,
+      };
+    });
+
+    const { error: srsError } = await service
+      .from("srs_cards")
+      .upsert(cardRows, { onConflict: "user_id,question_id" });
+    if (srsError) {
+      // Don't fail the whole grade if SRS write fails — log and continue.
+      // Worst case: user just doesn't see this attempt in their review queue.
+      console.warn("srs_upsert_failed", srsError.message);
+    }
+  }
 
   const completedAt = new Date();
   const timeSpentSeconds = Math.max(
