@@ -41,8 +41,8 @@ Free es el default implícito — un usuario sin row en `public.subscriptions` s
 1. Crea un proyecto en [dashboard.stripe.com](https://dashboard.stripe.com) (test mode primero).
 2. Crea un Producto "Quizen Pro" con un Price recurring mensual ($9 USD o lo que decidas). Copia el `price_...` ID.
 3. Completa en `.env.local`:
-   - `STRIPE_SECRET_KEY` (sk*test*... para test)
-   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (pk*test*... — reservado para futuras integraciones cliente)
+   - `STRIPE_SECRET_KEY` (formato `sk_test_...` en test mode)
+   - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (formato `pk_test_...` — reservado para futuras integraciones cliente)
    - `STRIPE_PRICE_ID_PRO_MONTHLY=<price_id>`
 4. Para webhooks en local: instala [Stripe CLI](https://stripe.com/docs/stripe-cli) y corre:
    ```bash
