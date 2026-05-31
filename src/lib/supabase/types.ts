@@ -242,8 +242,27 @@ export type Database = {
           cancel_at_period_end: boolean;
           updated_at: string;
         };
-        Insert: never;
-        Update: never;
+        // Writes are server-only — RLS only permits SELECT for the owner.
+        // The Stripe webhook is the only writer; opened up for service-role.
+        Insert: {
+          user_id: string;
+          stripe_customer_id: string;
+          stripe_subscription_id?: string | null;
+          status?: "free" | "active" | "past_due" | "canceled" | "trialing";
+          plan?: "free" | "pro";
+          current_period_end?: string | null;
+          cancel_at_period_end?: boolean;
+          updated_at?: string;
+        };
+        Update: {
+          stripe_customer_id?: string;
+          stripe_subscription_id?: string | null;
+          status?: "free" | "active" | "past_due" | "canceled" | "trialing";
+          plan?: "free" | "pro";
+          current_period_end?: string | null;
+          cancel_at_period_end?: boolean;
+          updated_at?: string;
+        };
         Relationships: [];
       };
     };
