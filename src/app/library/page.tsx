@@ -3,13 +3,15 @@ import {
   CheckCircle2,
   FileText,
   Loader2,
+  Sparkles,
   Upload,
 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { GenerateQuizDialog } from "@/components/quiz/generate-quiz-dialog";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -141,6 +143,18 @@ export default async function LibraryPage() {
                         </p>
                       )}
                     </div>
+                    {status === "ready" && (
+                      <GenerateQuizDialog
+                        documentId={doc.id}
+                        documentTitle={doc.title}
+                        trigger={
+                          <Button size="sm" variant="outline">
+                            <Sparkles />
+                            Generar quiz
+                          </Button>
+                        }
+                      />
+                    )}
                     <Badge variant="outline" className={cn(meta.className)}>
                       <Icon
                         className={cn("size-3", isLoading && "animate-spin")}
