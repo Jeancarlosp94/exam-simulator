@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
+import { Turnstile, isTurnstileEnabled } from "@/components/auth/turnstile";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -19,9 +20,17 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [magicLinkPending, setMagicLinkPending] = useState(false);
   const [googlePending, setGooglePending] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+
+  const captchaRequired = isTurnstileEnabled();
+  const captchaReady = !captchaRequired || captchaToken !== null;
 
   async function handleMagicLink(event: FormEvent) {
     event.preventDefault();
+    if (!captchaReady) {
+      toast.error("Completa el captcha antes de continuar.");
+      return;
+    }
     setMagicLinkPending(true);
 
     const supabase = createSupabaseBrowserClient();
@@ -29,10 +38,18 @@ export default function LoginPage() {
       email,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
+        // Supabase verifies this token server-side with the Turnstile
+        // secret configured in Supabase Auth → Bot Protection. Invalid
+        // or missing → Supabase returns error and no email is sent.
+        // captchaToken is ignored if Supabase isn't configured for it,
+        // so safe to pass unconditionally.
+        captchaToken: captchaToken ?? undefined,
       },
     });
 
     setMagicLinkPending(false);
+    // Reset captcha so a re-submit doesn't reuse the spent token.
+    setCaptchaToken(null);
 
     if (error) {
       toast.error(error.message);
@@ -42,6 +59,10 @@ export default function LoginPage() {
   }
 
   async function handleGoogle() {
+    if (!captchaReady) {
+      toast.error("Completa el captcha antes de continuar.");
+      return;
+    }
     setGooglePending(true);
 
     const supabase = createSupabaseBrowserClient();
@@ -49,6 +70,10 @@ export default function LoginPage() {
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
+        // signInWithOAuth's typed options don't currently accept
+        // captchaToken. The button gate above prevents bot clicks;
+        // Supabase Bot Protection can also enforce captcha at the
+        // /auth/v1/authorize endpoint for OAuth callbacks.
       },
     });
 
@@ -73,7 +98,7 @@ export default function LoginPage() {
             variant="outline"
             className="w-full"
             onClick={handleGoogle}
-            disabled={googlePending}
+            disabled={googlePending || !captchaReady}
           >
             {googlePending ? "Redirigiendo..." : "Continuar con Google"}
           </Button>
@@ -100,10 +125,18 @@ export default function LoginPage() {
                 onChange={(event) => setEmail(event.target.value)}
               />
             </div>
+
+            {captchaRequired && (
+              <Turnstile
+                onVerify={(token) => setCaptchaToken(token)}
+                onExpire={() => setCaptchaToken(null)}
+              />
+            )}
+
             <Button
               type="submit"
               className="w-full"
-              disabled={magicLinkPending}
+              disabled={magicLinkPending || !captchaReady}
             >
               {magicLinkPending ? "Enviando..." : "Enviar enlace mágico"}
             </Button>

@@ -3,9 +3,26 @@ import { extractText, getDocumentProxy } from "unpdf";
 
 import { countDocumentsThisMonth, getUserPlan } from "@/lib/billing/plan";
 import { chunkText } from "@/lib/pdf/chunk";
+import {
+  detectSuspiciousContent,
+  SUSPICIOUS_CONTENT_WARNING,
+} from "@/lib/pdf/suspicious";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
+
+/** Max pages we'll process. Above this we bail before extracting to
+ * avoid OOM / timeout from malicious or oversized PDFs. */
+const MAX_PAGES = 200;
+
+/** Hard timeout for unpdf's extractText call. Vercel kills the function
+ * at maxDuration anyway, but this gives us a clean error before the
+ * runtime SIGTERMs us mid-write to the DB. */
+const EXTRACT_TIMEOUT_MS = 45_000;
+
+/** Max characters in the joined extracted text. A 200-page PDF averages
+ * ~250K chars; 1M is a sanity ceiling. */
+const MAX_EXTRACTED_CHARS = 1_000_000;
 
 /**
  * POST /api/pdf/extract
@@ -165,22 +182,60 @@ export async function POST(request: Request) {
     );
   }
 
-  // 6. Extract text
+  // 6. Extract text — with page-count gate and hard timeout
   let totalPages = 0;
   let fullText = "";
   try {
     const pdf = await getDocumentProxy(buffer);
     totalPages = pdf.numPages;
-    const result = await extractText(pdf, { mergePages: true });
+
+    // Page count cap: bail before extract on adversarial / oversized PDFs.
+    if (totalPages > MAX_PAGES) {
+      await markFailed(
+        document.id,
+        `PDF tiene ${totalPages} páginas (límite ${MAX_PAGES}).`,
+      );
+      return NextResponse.json(
+        {
+          error: "too_many_pages",
+          pages: totalPages,
+          limit: MAX_PAGES,
+        },
+        { status: 413 },
+      );
+    }
+
+    // Hard timeout on extractText. Defends against PDFs structured to make
+    // pdf.js loop or allocate forever — Vercel will SIGTERM us at maxDuration
+    // either way, but a clean rejection here lets us mark the document
+    // failed with a sensible error_message rather than leaving it in
+    // 'extracting' limbo.
+    const result = await Promise.race([
+      extractText(pdf, { mergePages: true }),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error("extract_timeout")),
+          EXTRACT_TIMEOUT_MS,
+        ),
+      ),
+    ]);
+
     fullText = Array.isArray(result.text)
       ? result.text.join("\n\n")
       : result.text;
   } catch (error) {
     const message = error instanceof Error ? error.message : "pdf_parse_failed";
     await markFailed(document.id, message);
+    const status = message === "extract_timeout" ? 504 : 422;
     return NextResponse.json(
-      { error: "pdf_parse_failed", detail: message },
-      { status: 422 },
+      {
+        error:
+          message === "extract_timeout"
+            ? "extract_timeout"
+            : "pdf_parse_failed",
+        detail: message,
+      },
+      { status },
     );
   }
 
@@ -190,6 +245,36 @@ export async function POST(request: Request) {
       "El PDF no contiene texto extraíble. Si es un escaneado, OCR aún no está soportado.",
     );
     return NextResponse.json({ error: "empty_text" }, { status: 422 });
+  }
+
+  // Sanity ceiling on extracted size — a 1M char document is already
+  // ~250K tokens, well beyond what's useful to feed an LLM.
+  if (fullText.length > MAX_EXTRACTED_CHARS) {
+    await markFailed(
+      document.id,
+      `Texto extraído de ${fullText.length} caracteres excede el límite de ${MAX_EXTRACTED_CHARS}. Reduce el PDF.`,
+    );
+    return NextResponse.json(
+      {
+        error: "text_too_long",
+        chars: fullText.length,
+        limit: MAX_EXTRACTED_CHARS,
+      },
+      { status: 413 },
+    );
+  }
+
+  // 6b. Suspicion heuristic — flag if document looks like a prompt-injection
+  // attempt. We don't reject the document (false positives would hurt legit
+  // academic content about prompt engineering); instead we add a runtime
+  // warning to each chunk so the LLM sees it alongside the static system
+  // prompt rules.
+  const suspicionReport = detectSuspiciousContent(fullText);
+  if (suspicionReport.suspicious) {
+    console.warn(
+      `[pdf-extract] document ${document.id} flagged as suspicious:`,
+      suspicionReport.reasons.join("; "),
+    );
   }
 
   // 7. Chunk + insert
@@ -202,11 +287,17 @@ export async function POST(request: Request) {
     );
   }
 
+  // If suspicious content was detected, prepend the warning to every
+  // chunk's stored content. The warning travels with the chunk into
+  // every downstream LLM call (quiz gen + tutor), reinforcing the
+  // static system-prompt rules with runtime context.
   const { error: insertError } = await service.from("document_chunks").insert(
     chunks.map((c) => ({
       document_id: document.id,
       chunk_index: c.index,
-      content: c.content,
+      content: suspicionReport.suspicious
+        ? SUSPICIOUS_CONTENT_WARNING + c.content
+        : c.content,
       token_count: c.approxTokens,
     })),
   );
