@@ -29,9 +29,8 @@ export function optionalEnv(key: string, fallback: string): string {
  *   - exactly the literal "TODO" / "REPLACE_ME"
  *
  * Use this to gate optional integrations so a half-filled .env doesn't
- * blow up the request path. The rate limiter, Stripe webhook, Resend
- * SMTP wiring, and Sentry init all degrade to no-op when their env vars
- * look like placeholders.
+ * blow up the request path. The rate limiter, Stripe webhook, and Sentry
+ * init all degrade to no-op when their env vars look like placeholders.
  */
 export function isPlaceholder(value: string | undefined | null): boolean {
   if (!value) return true;

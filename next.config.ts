@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 /**
  * Security headers applied to every response. Tuned for Quizen specifically:
- *  - We talk to Supabase + Anthropic + Gemini + Stripe + Resend + Sentry +
+ *  - We talk to Supabase + Anthropic + Gemini + Stripe + Sentry +
  *    PostHog — connect-src covers all of them.
  *  - We render no third-party iframes except Stripe's checkout (handled by
  *    Stripe's hosted URL via window.location, not embedded) — frame-src
