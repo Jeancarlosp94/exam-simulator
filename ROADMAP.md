@@ -12,6 +12,7 @@ Este documento es la lista de sprints **pendientes** con prompts listos para cop
 - ✅ PWA instalable (manifest + service worker + offline page + iconos)
 - ✅ Provider AI switcheable (Gemini default, Anthropic opt-in vía `AI_PROVIDER=anthropic`)
 - ✅ Security hardening: page cap, extract timeout, anti-injection heuristic, PDF magic bytes, security headers (CSP, HSTS, X-Frame-Options), Turnstile opcional, RLS en todas las tablas
+- ✅ Sprint 9: multi-format input (.pdf, .docx, .txt, .md) + OCR fallback para PDFs escaneados (`/api/documents/extract`)
 
 ### Lo que falta para "producto realmente útil"
 
@@ -612,6 +613,66 @@ Acceptance: app en TestFlight + Google Play Internal Track. Push notif funciona.
 Commit: feat(mobile): native iOS + Android apps via Capacitor.
 ```
 
+### Sprint 17b — APK sideloadable (Android sin Play Store) (3-5 días)
+
+**Goal**: que un usuario pueda instalar Quizen en Android **sin pasar por Google Play** — útil para early access, beta cerrado, países donde Play no llega, o evitar el corte del 15-30% de Google. Aplica solo después del Sprint 17 (porque reutiliza el wrap de Capacitor).
+
+**Acceptance**:
+
+- Pipeline en GitHub Actions produce un `.apk` firmado con keystore propio (no Play App Signing) en cada release-tag
+- Página pública `/download` con:
+  - Botón "Descargar APK" (link directo al asset del GitHub release o a `/api/download/android` que sirve el último APK desde Storage)
+  - Instrucciones visuales: Settings → Apps → Special access → Install unknown apps → Permitir Chrome
+  - SHA-256 del APK para que el usuario verifique integridad
+- App actualiza sola: dentro del APK, on launch chequea `quizen.app/api/version`; si hay versión nueva, muestra banner "Nueva versión disponible" con link de descarga
+- Documentar en `docs/android-sideload.md`: cómo generar el keystore, cómo rotar, qué pasa si se pierde (los usuarios deben reinstalar)
+
+**Prompt**:
+
+```
+Procede con el Sprint 17b — APK sideloadable (Android sin Play Store).
+
+Requisito previo: Sprint 17 (Capacitor wrap) ya completado.
+
+Implementa:
+
+1. Generar keystore Android propio (fuera del repo):
+   keytool -genkey -v -keystore quizen-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias quizen
+   Guardar en 1Password / Vault. NUNCA al repo. Documentar la rotación.
+
+2. GitHub Actions workflow `.github/workflows/android-apk.yml`:
+   - Trigger: push de tag `v*.*.*`
+   - Steps: checkout → setup-node → setup-java 17 → setup Android SDK
+   - npm ci → npm run build → npx cap sync android
+   - cd android && ./gradlew assembleRelease (con KEYSTORE_PATH, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD desde GitHub Secrets)
+   - Upload del .apk como release asset en el mismo tag
+
+3. Página `/download/page.tsx` (Server Component):
+   - Fetch del último release de GitHub vía gh API (cacheado 1h con `revalidate`)
+   - Botón con link al asset .apk del último release
+   - Sección "Cómo instalar" con screenshots paso a paso
+   - SHA-256 hash mostrado debajo del botón
+
+4. Auto-update check dentro de la app:
+   - En `src/app/layout.tsx` (o en el cliente shell de Capacitor), useEffect que llama a `/api/version` al boot
+   - `/api/version` responde { latest: "1.2.3", download_url: "https://github.com/.../quizen-1.2.3.apk" }
+   - Si la versión instalada (leída de Capacitor's App plugin via getInfo().version) es menor → toast persistente "Nueva versión disponible" con CTA al download
+
+5. Crear `docs/android-sideload.md` con:
+   - Por qué APK sideload (early access, evitar Play Store fee, países sin Play)
+   - Cómo generar el keystore y dónde guardarlo
+   - Política de rotación (si se pierde la key, los usuarios DEBEN reinstalar — Android no permite cambiar la signing key entre versiones)
+   - Trade-offs: sin Play Protect, sin auto-update vía OS, requiere "unknown sources" habilitado
+
+6. Linkear `/download` desde el footer del landing y desde `/pricing`.
+
+Acceptance: descargar APK desde /download, instalar en un Android real (sideload), abrir la app y ver el banner de update cuando se publica un nuevo release.
+
+Commit: feat(android): sideloadable APK build + /download page + auto-update check.
+```
+
+---
+
 ### Sprint 18 — Multiplayer live mode (2 sem)
 
 ```
@@ -702,4 +763,4 @@ Commit: feat(institutional): LMS plugins (Canvas + Moodle) with white-label.
 
 ---
 
-**Última actualización**: 2026-06-01 (después del deploy a Vercel + security hardening + PWA)
+**Última actualización**: 2026-06-01 (Sprint 9 done — multi-format input + OCR; añadido Sprint 17b — APK sideloadable)
