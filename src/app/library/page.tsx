@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { countDocumentsThisMonth, getUserPlan } from "@/lib/billing/plan";
+import { extensionLabel, extractExtension } from "@/lib/documents/extension";
 import { cn } from "@/lib/utils";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
@@ -99,7 +100,7 @@ export default async function LibraryPage({
     supabase
       .from("documents")
       .select(
-        "id, title, status, size_bytes, page_count, error_message, created_at",
+        "id, title, status, size_bytes, page_count, storage_path, error_message, created_at",
       )
       .order("created_at", { ascending: false }),
     supabase
@@ -320,6 +321,7 @@ export default async function LibraryPage({
               const Icon = meta.icon;
               const isLoading =
                 status === "uploading" || status === "extracting";
+              const ext = extractExtension(doc.storage_path);
               return (
                 <li key={doc.id}>
                   <Card className="transition-colors hover:bg-card/70">
@@ -354,6 +356,12 @@ export default async function LibraryPage({
                           }
                         />
                       )}
+                      <Badge
+                        variant="outline"
+                        className="border-border bg-card/40 text-muted-foreground"
+                      >
+                        {extensionLabel(ext)}
+                      </Badge>
                       <Badge variant="outline" className={cn(meta.className)}>
                         <Icon
                           className={cn("size-3", isLoading && "animate-spin")}

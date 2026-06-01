@@ -23,9 +23,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import {
+  SUPPORTED_EXTENSIONS,
+  extractExtension,
+  isSupportedExtension,
+} from "@/lib/documents/extension";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 const MAX_BYTES = 25 * 1024 * 1024; // 25 MB
+
+const ACCEPT_ATTR =
+  "application/pdf,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,text/plain,.txt,text/markdown,.md";
+
+const CONTENT_TYPE_BY_EXT: Record<string, string> = {
+  pdf: "application/pdf",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  txt: "text/plain",
+  md: "text/markdown",
+};
 
 type Phase = "idle" | "uploading" | "extracting" | "done" | "error";
 
@@ -44,8 +59,11 @@ export default function UploadPage() {
   const handleFile = useCallback(
     (next: File | null) => {
       if (!next) return;
-      if (!next.name.toLowerCase().endsWith(".pdf")) {
-        toast.error("Solo se aceptan archivos PDF.");
+      const ext = extractExtension(next.name);
+      if (!isSupportedExtension(ext)) {
+        toast.error(
+          `Formato no soportado. Acepta: ${SUPPORTED_EXTENSIONS.map((e) => `.${e}`).join(", ")}.`,
+        );
         return;
       }
       if (next.size > MAX_BYTES) {
@@ -56,7 +74,8 @@ export default function UploadPage() {
       }
       setFile(next);
       if (!titleEdited) {
-        setTitle(next.name.replace(/\.pdf$/i, ""));
+        // Strip the trailing ".ext" of any supported extension.
+        setTitle(next.name.replace(/\.[a-z0-9]+$/i, ""));
       }
       setErrorMessage(null);
       setPhase("idle");
@@ -99,7 +118,16 @@ export default function UploadPage() {
     }
 
     const documentId = crypto.randomUUID();
-    const storagePath = `${user.id}/${documentId}.pdf`;
+    const ext = extractExtension(file.name);
+    if (!isSupportedExtension(ext)) {
+      // Should be unreachable — handleFile already gates this — but the
+      // type narrowing pays off below.
+      setPhase("error");
+      setErrorMessage("Formato no soportado.");
+      return;
+    }
+    const storagePath = `${user.id}/${documentId}.${ext}`;
+    const contentType = CONTENT_TYPE_BY_EXT[ext];
 
     // 1. Insert documents row (RLS enforces user_id = auth.uid()).
     const { error: insertError } = await supabase.from("documents").insert({
@@ -124,7 +152,7 @@ export default function UploadPage() {
     const { error: uploadError } = await supabase.storage
       .from("documents")
       .upload(storagePath, file, {
-        contentType: "application/pdf",
+        contentType,
         cacheControl: "3600",
         upsert: false,
       });
@@ -141,7 +169,7 @@ export default function UploadPage() {
     setPhase("extracting");
 
     // 3. Fire extraction. The route handler updates the document status.
-    const extractResponse = await fetch("/api/pdf/extract", {
+    const extractResponse = await fetch("/api/documents/extract", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ document_id: documentId }),
@@ -175,10 +203,12 @@ export default function UploadPage() {
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
       <header className="flex flex-col gap-1">
-        <h1 className="text-3xl font-semibold tracking-tight">Subir PDF</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">
+          Subir documento
+        </h1>
         <p className="text-sm text-muted-foreground">
-          Sube un documento de hasta 25 MB. La IA lo procesa y queda listo para
-          generar cuestionarios.
+          PDF, Word, texto o markdown — hasta 25 MB. La IA lo procesa y queda
+          listo para generar cuestionarios.
         </p>
       </header>
 
@@ -186,7 +216,7 @@ export default function UploadPage() {
         <CardHeader>
           <CardTitle>Archivo</CardTitle>
           <CardDescription>
-            Arrastra el PDF aquí o selecciónalo desde tu equipo.
+            Arrastra el archivo aquí o selecciónalo desde tu equipo.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -218,15 +248,17 @@ export default function UploadPage() {
             ) : (
               <>
                 <p className="font-medium">
-                  Arrastra tu PDF o haz clic para elegir
+                  Arrastra tu archivo o haz clic para elegir
                 </p>
-                <p className="text-xs text-muted-foreground">Máximo 25 MB</p>
+                <p className="text-xs text-muted-foreground">
+                  PDF, Word, texto o markdown — máximo 25 MB
+                </p>
               </>
             )}
             <input
               ref={inputRef}
               type="file"
-              accept="application/pdf,.pdf"
+              accept={ACCEPT_ATTR}
               className="hidden"
               onChange={handleSelect}
             />
