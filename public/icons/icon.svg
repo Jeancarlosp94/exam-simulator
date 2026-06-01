@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0a0a0a"/>
+  <text
+    x="256" y="370"
+    font-family="ui-sans-serif, system-ui, -apple-system, sans-serif"
+    font-size="340"
+    font-weight="600"
+    text-anchor="middle"
+    fill="#14b8a6">Q</text>
+</svg>
