@@ -1,16 +1,26 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
+import { envOrNull } from "@/lib/env";
+
 /**
- * Upstash-backed rate limiter. Returns null if Upstash env vars are absent,
- * which lets local dev work without configuring Redis. Callers should
- * treat null as "no rate limit available" — production must wire Upstash
- * to avoid burning Anthropic credits.
+ * Upstash-backed rate limiter. Returns null when Upstash env vars are
+ * absent OR look like placeholders from .env.example (e.g.
+ * `https://<algo>.upstash.io`). Lets local dev work without configuring
+ * Redis. Production must wire real Upstash creds to avoid burning AI
+ * credits to abusers.
  */
 function getRedis() {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const url = envOrNull("UPSTASH_REDIS_REST_URL");
+  const token = envOrNull("UPSTASH_REDIS_REST_TOKEN");
   if (!url || !token) return null;
+  // Defense-in-depth: even if the placeholder check passes, validate the URL
+  // so a malformed config doesn't blow up the request path.
+  try {
+    new URL(url);
+  } catch {
+    return null;
+  }
   return new Redis({ url, token });
 }
 

@@ -23,6 +23,36 @@ export function optionalEnv(key: string, fallback: string): string {
 }
 
 /**
+ * True when the value looks like an unfilled placeholder from .env.example:
+ *   - empty / whitespace
+ *   - contains `<...>` template markers (e.g. "https://<algo>.upstash.io")
+ *   - exactly the literal "TODO" / "REPLACE_ME"
+ *
+ * Use this to gate optional integrations so a half-filled .env doesn't
+ * blow up the request path. The rate limiter, Stripe webhook, Resend
+ * SMTP wiring, and Sentry init all degrade to no-op when their env vars
+ * look like placeholders.
+ */
+export function isPlaceholder(value: string | undefined | null): boolean {
+  if (!value) return true;
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return true;
+  if (/<[^>]*>/.test(trimmed)) return true; // <pega-aqui>, <algo>, etc.
+  if (/^(TODO|REPLACE_ME|XXX+)$/i.test(trimmed)) return true;
+  return false;
+}
+
+/**
+ * Like optionalEnv but returns null instead of a fallback when the value
+ * is missing OR looks like a placeholder. Use when "missing" means
+ * "feature disabled" (e.g. rate limiting, analytics).
+ */
+export function envOrNull(key: string): string | null {
+  const value = process.env[key];
+  return isPlaceholder(value) ? null : (value as string);
+}
+
+/**
  * Try multiple env var names in order; return the first one that's set.
  * Throws a helpful error listing all candidates if none are populated.
  *
