@@ -1,16 +1,22 @@
 import { createBrowserClient } from "@supabase/ssr";
 
-import { requireEnv } from "@/lib/env";
+import {
+  getClientSupabasePublishableKey,
+  getClientSupabaseUrl,
+} from "@/lib/env";
 
 import type { Database } from "./types";
 
 /**
  * Supabase client for client components ("use client").
- * Anon key + RLS only. Never use the service role key here.
+ *
+ * Uses the CLIENT-SAFE env helpers because this code ships to the browser
+ * bundle, where dynamic `process.env[key]` access returns undefined. The
+ * helpers reference env vars by literal property name so SWC inlines them.
  */
 export function createSupabaseBrowserClient() {
   return createBrowserClient<Database>(
-    requireEnv("NEXT_PUBLIC_SUPABASE_URL"),
-    requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+    getClientSupabaseUrl(),
+    getClientSupabasePublishableKey(),
   );
 }
