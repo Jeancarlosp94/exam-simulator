@@ -5,6 +5,7 @@ import { DEFAULT_MODEL, getAnthropicClient } from "@/lib/anthropic";
 import {
   buildTutorContext,
   TUTOR_SYSTEM_PROMPT,
+  wrapStudentMessage,
 } from "@/lib/quiz/tutor-prompts";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -150,7 +151,13 @@ export async function POST(request: Request) {
         cache_control: { type: "ephemeral" },
       },
     ],
-    messages: history.map((m) => ({ role: m.role, content: m.content })),
+    // Wrap user turns in <student_message> delimiters and a re-anchor
+    // note. Assistant turns are echoed back unchanged.
+    messages: history.map((m) =>
+      m.role === "user"
+        ? { role: "user" as const, content: wrapStudentMessage(m.content) }
+        : { role: m.role, content: m.content },
+    ),
   });
 
   // Pipe the SDK's async iterator of events into a plain-text stream of

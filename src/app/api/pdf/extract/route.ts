@@ -127,11 +127,48 @@ export async function POST(request: Request) {
     );
   }
 
+  // 5b. Server-side validation: size + magic bytes. The client validates
+  // these too but client checks are advisory — never trust them for security.
+  const MAX_BYTES = 25 * 1024 * 1024; // mirror the client limit
+  if (file.size > MAX_BYTES) {
+    await markFailed(
+      document.id,
+      `El archivo excede el límite de 25 MB (real: ${(file.size / 1024 / 1024).toFixed(1)} MB).`,
+    );
+    return NextResponse.json(
+      {
+        error: "file_too_large",
+        limit_bytes: MAX_BYTES,
+        actual_bytes: file.size,
+      },
+      { status: 413 },
+    );
+  }
+
+  const buffer = new Uint8Array(await file.arrayBuffer());
+
+  // PDF magic bytes are "%PDF-" (0x25 0x50 0x44 0x46 0x2D). Rejecting
+  // mismatches stops a malicious upload from passing a renamed binary
+  // as a PDF and crashing unpdf in unexpected ways downstream.
+  const PDF_MAGIC = [0x25, 0x50, 0x44, 0x46, 0x2d];
+  const hasPdfMagic =
+    buffer.length >= PDF_MAGIC.length &&
+    PDF_MAGIC.every((byte, i) => buffer[i] === byte);
+  if (!hasPdfMagic) {
+    await markFailed(
+      document.id,
+      "El archivo no parece ser un PDF válido (magic bytes incorrectos).",
+    );
+    return NextResponse.json(
+      { error: "invalid_pdf_signature" },
+      { status: 422 },
+    );
+  }
+
   // 6. Extract text
   let totalPages = 0;
   let fullText = "";
   try {
-    const buffer = new Uint8Array(await file.arrayBuffer());
     const pdf = await getDocumentProxy(buffer);
     totalPages = pdf.numPages;
     const result = await extractText(pdf, { mergePages: true });

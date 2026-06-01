@@ -114,8 +114,8 @@ export function GenerateQuizDialog({
         <DialogHeader>
           <DialogTitle>Generar quiz</DialogTitle>
           <DialogDescription className="truncate">
-            Desde &quot;{documentTitle}&quot;. La IA usa{" "}
-            <span className="font-medium">claude-opus-4-7</span> y tarda 30-90s.
+            Desde &quot;{documentTitle}&quot;. La generación tarda entre 10 y 60
+            segundos.
           </DialogDescription>
         </DialogHeader>
 

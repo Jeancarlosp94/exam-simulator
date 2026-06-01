@@ -1,7 +1,10 @@
 import { Brain, FileText, Sparkles, Upload } from "lucide-react";
+import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const steps = [
   {
@@ -14,24 +17,33 @@ const steps = [
     icon: Sparkles,
     title: "La IA lo lee",
     description:
-      "Claude extrae los conceptos clave y arma preguntas de distintos niveles de Bloom.",
+      "Extrae los conceptos clave y arma preguntas de distintos niveles de Bloom.",
   },
   {
     icon: Brain,
     title: "Estudia con calma",
     description:
-      "Quiz cronometrado o libre, con explicación detallada en cada respuesta.",
+      "Quiz cronometrado o libre, con explicación detallada en cada respuesta y tutor socrático.",
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  // Server-side auth check: if logged in, CTAs go straight to /library.
+  // If anonymous, they go to /login with a redirect-back hint.
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const primaryHref = user ? "/upload" : "/login?next=/upload";
+  const secondaryHref = user ? "/library" : "/pricing";
+
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-b border-border/60">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
-          <div className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2">
             <span
-              className="size-7 rounded-lg bg-primary"
+              className="size-7 rounded-lg"
               aria-hidden
               style={{
                 background:
@@ -39,13 +51,32 @@ export default function Home() {
               }}
             />
             <span className="text-lg font-semibold tracking-tight">Quizen</span>
-          </div>
-          <Badge
-            variant="outline"
-            className="border-primary/30 bg-primary/10 text-primary"
-          >
-            Beta privada · Sprint 1
-          </Badge>
+          </Link>
+          <nav className="flex items-center gap-3 text-sm">
+            <Link
+              href="/pricing"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Precios
+            </Link>
+            {user ? (
+              <Link
+                href="/library"
+                className={cn(buttonVariants({ size: "sm" }))}
+              >
+                Mi biblioteca
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className={cn(
+                  buttonVariants({ size: "sm", variant: "outline" }),
+                )}
+              >
+                Iniciar sesión
+              </Link>
+            )}
+          </nav>
         </div>
       </header>
 
@@ -71,16 +102,22 @@ export default function Home() {
           </p>
 
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button size="lg" disabled className="cursor-not-allowed">
+            <Link
+              href={primaryHref}
+              className={cn(buttonVariants({ size: "lg" }))}
+            >
               <Upload />
-              Subir un PDF
-            </Button>
-            <Button size="lg" variant="outline" disabled>
-              Ver demo
-            </Button>
+              {user ? "Subir un PDF" : "Empezar gratis"}
+            </Link>
+            <Link
+              href={secondaryHref}
+              className={cn(buttonVariants({ size: "lg", variant: "outline" }))}
+            >
+              {user ? "Ir a biblioteca" : "Ver planes"}
+            </Link>
           </div>
           <p className="text-xs text-muted-foreground">
-            La carga de PDF llega en el Sprint 3 (semana 4).
+            Plan Free: 3 PDFs al mes. Sin tarjeta de crédito.
           </p>
         </section>
 
@@ -105,7 +142,9 @@ export default function Home() {
       <footer className="border-t border-border/60">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6 text-xs text-muted-foreground">
           <span>© 2026 Quizen</span>
-          <span>Hecho con Claude · Next.js · Supabase</span>
+          <Link href="/pricing" className="hover:text-foreground">
+            Planes y precios
+          </Link>
         </div>
       </footer>
     </div>
