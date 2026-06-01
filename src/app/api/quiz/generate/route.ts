@@ -1,13 +1,8 @@
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { NextResponse } from "next/server";
 
-import { DEFAULT_MODEL, getAnthropicClient } from "@/lib/anthropic";
+import { getQuizGenerator, QuizGenerationError } from "@/lib/ai";
 import { getUserPlan } from "@/lib/billing/plan";
-import { buildUserPrompt, SYSTEM_PROMPT } from "@/lib/quiz/prompts";
-import {
-  GenerateQuizRequestSchema,
-  QuizGenerationSchema,
-} from "@/lib/quiz/schemas";
+import { GenerateQuizRequestSchema } from "@/lib/quiz/schemas";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
@@ -135,63 +130,31 @@ export async function POST(request: Request) {
     .map((c) => `[CHUNK ${c.chunk_index}]\n${c.content}`)
     .join("\n\n");
 
-  // 6. Call Claude. Three breakpoints — system, document, then the per-request
-  //    instruction is intentionally uncached.
-  const anthropic = getAnthropicClient();
-  let parseResponse;
+  // 6. Generate via the picked AI provider (Gemini by default, Anthropic if
+  //    AI_PROVIDER=anthropic). Each provider handles its own model,
+  //    structured output, and prompt caching internally.
+  const generator = getQuizGenerator();
+  let generationResult;
   try {
-    parseResponse = await anthropic.messages.parse({
-      model: DEFAULT_MODEL,
-      max_tokens: 16000,
-      thinking: { type: "adaptive" },
-      output_config: {
-        effort: "high",
-        format: zodOutputFormat(QuizGenerationSchema),
-      },
-      system: [
-        {
-          type: "text",
-          text: SYSTEM_PROMPT,
-          cache_control: { type: "ephemeral" },
-        },
-      ],
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: `<document>\n${documentText}\n</document>`,
-              cache_control: { type: "ephemeral" },
-            },
-            {
-              type: "text",
-              text: buildUserPrompt({
-                documentText: "(see prior block)",
-                count,
-                difficulty,
-              }).replace(/<document>[\s\S]*?<\/document>\n\n/, ""),
-            },
-          ],
-        },
-      ],
+    generationResult = await generator.generate({
+      documentText,
+      count,
+      difficulty,
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "anthropic_request_failed";
+    const detail =
+      error instanceof QuizGenerationError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "unknown_error";
     return NextResponse.json(
-      { error: "anthropic_request_failed", detail: message },
+      { error: "ai_generation_failed", detail, provider: generator.name },
       { status: 502 },
     );
   }
 
-  const generated = parseResponse.parsed_output;
-  if (!generated) {
-    return NextResponse.json(
-      { error: "parse_failed", detail: "model_returned_invalid_shape" },
-      { status: 502 },
-    );
-  }
+  const generated = { questions: generationResult.questions };
 
   // 7. Map source_chunk_index -> source_chunk_id (fall back to null if the
   //    model invented a chunk index — better to lose grounding than crash).
@@ -212,11 +175,10 @@ export async function POST(request: Request) {
       title: quizTitle,
       difficulty,
       question_count: generated.questions.length,
-      generation_model: DEFAULT_MODEL,
-      generation_tokens_input: parseResponse.usage.input_tokens,
-      generation_tokens_output: parseResponse.usage.output_tokens,
-      generation_cached_tokens:
-        parseResponse.usage.cache_read_input_tokens ?? 0,
+      generation_model: generationResult.usage.model,
+      generation_tokens_input: generationResult.usage.inputTokens,
+      generation_tokens_output: generationResult.usage.outputTokens,
+      generation_cached_tokens: generationResult.usage.cachedTokens,
     })
     .select("id")
     .single();
@@ -255,12 +217,11 @@ export async function POST(request: Request) {
   return NextResponse.json({
     quiz_id: insertedQuiz.id,
     questions_count: generated.questions.length,
+    provider: generator.name,
     usage: {
-      input_tokens: parseResponse.usage.input_tokens,
-      output_tokens: parseResponse.usage.output_tokens,
-      cache_read_input_tokens: parseResponse.usage.cache_read_input_tokens ?? 0,
-      cache_creation_input_tokens:
-        parseResponse.usage.cache_creation_input_tokens ?? 0,
+      input_tokens: generationResult.usage.inputTokens,
+      output_tokens: generationResult.usage.outputTokens,
+      cached_tokens: generationResult.usage.cachedTokens,
     },
   });
 }
