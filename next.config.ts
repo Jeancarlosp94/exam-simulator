@@ -59,6 +59,17 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  /**
+   * Packages with native binaries or large wasm assets must stay out of
+   * Next's bundle and be required from node_modules at runtime. Otherwise
+   * the build OOMs while tracing platform-specific binaries (the build
+   * machine has 8 GB and the trace step can blow past that).
+   *
+   *  - @napi-rs/canvas: prebuilt N-API binaries per platform.
+   *  - tesseract.js: ships wasm + worker JS that Next can't safely bundle.
+   *  - unpdf: dynamically loads pdf.js builds; safer to skip bundling.
+   */
+  serverExternalPackages: ["@napi-rs/canvas", "tesseract.js", "unpdf"],
   async headers() {
     return [
       {
