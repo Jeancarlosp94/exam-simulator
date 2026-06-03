@@ -19,6 +19,27 @@ export type Difficulty = "easy" | "medium" | "hard";
 
 export type QuestionOption = { label: string; text: string };
 
+export type KeyTerm = {
+  term: string;
+  definition: string;
+  why_it_matters: string;
+};
+
+export type ConceptMapNode = { id: string; label: string };
+
+export type ConceptMapEdge = {
+  from: string; // node id
+  to: string; // node id
+  label: string;
+};
+
+export type RetrievalQuestion = {
+  prompt: string;
+  options: QuestionOption[];
+  correct_label: string;
+  explanation: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -266,6 +287,95 @@ export type Database = {
           source_chunk_id?: string | null;
         };
         Update: never;
+        Relationships: [];
+      };
+      study_sessions: {
+        Row: {
+          id: string;
+          user_id: string;
+          document_id: string;
+          mode: "pomodoro" | "deep_work" | "feynman" | "quick_review";
+          status: "active" | "completed" | "abandoned";
+          current_step: "pre_study" | "chunks" | "concept_map" | "completed";
+          current_chunk_index: number;
+          key_terms: KeyTerm[] | null;
+          advance_organizer: string | null;
+          schema_activation_answer: string | null;
+          concept_map_nodes: ConceptMapNode[] | null;
+          concept_map_edges: ConceptMapEdge[] | null;
+          started_at: string;
+          last_active_at: string;
+          completed_at: string | null;
+        };
+        Insert: {
+          user_id: string;
+          document_id: string;
+          mode: "pomodoro" | "deep_work" | "feynman" | "quick_review";
+          status?: "active" | "completed" | "abandoned";
+          current_step?: "pre_study" | "chunks" | "concept_map" | "completed";
+          current_chunk_index?: number;
+          key_terms?: KeyTerm[] | null;
+          advance_organizer?: string | null;
+          schema_activation_answer?: string | null;
+          concept_map_nodes?: ConceptMapNode[] | null;
+          concept_map_edges?: ConceptMapEdge[] | null;
+        };
+        Update: {
+          status?: "active" | "completed" | "abandoned";
+          current_step?: "pre_study" | "chunks" | "concept_map" | "completed";
+          current_chunk_index?: number;
+          key_terms?: KeyTerm[] | null;
+          advance_organizer?: string | null;
+          schema_activation_answer?: string | null;
+          concept_map_nodes?: ConceptMapNode[] | null;
+          concept_map_edges?: ConceptMapEdge[] | null;
+          last_active_at?: string;
+          completed_at?: string | null;
+        };
+        Relationships: [];
+      };
+      study_session_chunks: {
+        Row: {
+          session_id: string;
+          chunk_index: number;
+          document_chunk_id: string | null;
+          elaborative_question: string | null;
+          retrieval_question: RetrievalQuestion | null;
+          elaborative_answer: string | null;
+          self_explanation_answer: string | null;
+          self_explanation_score: number | null;
+          self_explanation_feedback: string | null;
+          retrieval_selected_label: string | null;
+          retrieval_is_correct: boolean | null;
+          retrieval_attempts: number;
+          visited_at: string;
+          completed_at: string | null;
+        };
+        Insert: {
+          session_id: string;
+          chunk_index: number;
+          document_chunk_id?: string | null;
+          elaborative_question?: string | null;
+          retrieval_question?: RetrievalQuestion | null;
+          elaborative_answer?: string | null;
+          self_explanation_answer?: string | null;
+          self_explanation_score?: number | null;
+          self_explanation_feedback?: string | null;
+          retrieval_selected_label?: string | null;
+          retrieval_is_correct?: boolean | null;
+          retrieval_attempts?: number;
+          completed_at?: string | null;
+        };
+        Update: {
+          elaborative_answer?: string | null;
+          self_explanation_answer?: string | null;
+          self_explanation_score?: number | null;
+          self_explanation_feedback?: string | null;
+          retrieval_selected_label?: string | null;
+          retrieval_is_correct?: boolean | null;
+          retrieval_attempts?: number;
+          completed_at?: string | null;
+        };
         Relationships: [];
       };
       public_quiz_shares: {

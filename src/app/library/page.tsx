@@ -2,6 +2,7 @@ import {
   AlertCircle,
   Brain,
   BookOpen,
+  Compass,
   CheckCircle2,
   Clock,
   FileText,
@@ -367,6 +368,14 @@ export default async function LibraryPage({
                       </div>
                       {status === "ready" && (
                         <>
+                          <Link
+                            href={`/study/${doc.id}/guide`}
+                            className={cn(buttonVariants({ size: "sm" }))}
+                            title="Modo guía (estudio didáctico antes del quiz)"
+                          >
+                            <Compass />
+                            <span className="hidden sm:inline">Guía</span>
+                          </Link>
                           <GenerateQuizDialog
                             documentId={doc.id}
                             documentTitle={doc.title}
@@ -388,7 +397,6 @@ export default async function LibraryPage({
                             title="Estudiar con tarjetas"
                           >
                             <BookOpen />
-                            <span className="hidden sm:inline">Tarjetas</span>
                           </Link>
                         </>
                       )}
