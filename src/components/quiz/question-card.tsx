@@ -112,7 +112,7 @@ export function QuestionCard({
                   type="button"
                   onClick={() => onSelect(option.label)}
                   className={cn(
-                    "flex w-full items-start gap-3 rounded-lg border p-4 text-left transition-all",
+                    "flex min-h-[56px] w-full items-start gap-3 rounded-lg border p-4 text-left transition-all",
                     isSelected
                       ? "border-primary bg-primary/10 shadow-sm"
                       : "border-border hover:border-primary/40 hover:bg-card/60",

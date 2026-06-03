@@ -13,12 +13,13 @@
  * the activate step deletes old caches.
  */
 
-const CACHE_NAME = "quizen-shell-v2";
+const CACHE_NAME = "quizen-shell-v3";
 
 const SHELL_URLS = [
   "/",
   "/login",
   "/pricing",
+  "/account",
   "/offline",
   "/manifest.webmanifest",
   "/icons/icon.svg",

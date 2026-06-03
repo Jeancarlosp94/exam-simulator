@@ -1,7 +1,9 @@
 "use client";
 
+import { ClipboardList } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
+import { useSwipeable } from "react-swipeable";
 import { toast } from "sonner";
 
 import { QuestionCard } from "@/components/quiz/question-card";
@@ -20,6 +22,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useTimer } from "@/hooks/use-timer";
+import { cn } from "@/lib/utils";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type {
   BloomLevel,
@@ -80,6 +83,7 @@ export function QuizPlayer({
   const [flags, setFlags] = useState<Record<string, boolean>>(initialFlags);
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showGridSheet, setShowGridSheet] = useState(false);
 
   // Snapshot the time-left calculation on first render. Date.now() must not
   // run in RSCs (react-hooks/purity) so we compute it on the client mount.
@@ -198,6 +202,16 @@ export function QuizPlayer({
     return "pending";
   }
 
+  // Swipe navigation between questions. Threshold of 50px feels natural
+  // without triggering on accidental option-tap drag.
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: () =>
+      setCurrentIndex((i) => Math.min(questions.length - 1, i + 1)),
+    onSwipedRight: () => setCurrentIndex((i) => Math.max(0, i - 1)),
+    trackMouse: false,
+    delta: 50,
+  });
+
   // ── Render: early-return for the impossible-state guard ──────────────────
 
   if (!currentQuestion) {
@@ -228,24 +242,26 @@ export function QuizPlayer({
       </header>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_280px]">
-        <QuestionCard
-          questionNumber={currentIndex + 1}
-          totalQuestions={questions.length}
-          prompt={currentQuestion.prompt}
-          options={currentQuestion.options}
-          selectedLabel={answers[currentQuestion.id] ?? null}
-          isFlagged={flags[currentQuestion.id] ?? false}
-          bloomLevel={currentQuestion.bloomLevel}
-          difficulty={currentQuestion.difficulty}
-          onSelect={handleSelect}
-          onToggleFlag={handleToggleFlag}
-          onPrevious={() => setCurrentIndex((i) => Math.max(0, i - 1))}
-          onNext={() =>
-            setCurrentIndex((i) => Math.min(questions.length - 1, i + 1))
-          }
-          isFirst={currentIndex === 0}
-          isLast={currentIndex === questions.length - 1}
-        />
+        <div {...swipeHandlers}>
+          <QuestionCard
+            questionNumber={currentIndex + 1}
+            totalQuestions={questions.length}
+            prompt={currentQuestion.prompt}
+            options={currentQuestion.options}
+            selectedLabel={answers[currentQuestion.id] ?? null}
+            isFlagged={flags[currentQuestion.id] ?? false}
+            bloomLevel={currentQuestion.bloomLevel}
+            difficulty={currentQuestion.difficulty}
+            onSelect={handleSelect}
+            onToggleFlag={handleToggleFlag}
+            onPrevious={() => setCurrentIndex((i) => Math.max(0, i - 1))}
+            onNext={() =>
+              setCurrentIndex((i) => Math.min(questions.length - 1, i + 1))
+            }
+            isFirst={currentIndex === 0}
+            isLast={currentIndex === questions.length - 1}
+          />
+        </div>
 
         <aside className="hidden lg:block">
           <QuestionGrid
@@ -256,6 +272,46 @@ export function QuizPlayer({
           />
         </aside>
       </div>
+
+      {/* Mobile-only floating "open grid" button.
+          Hidden on lg where the sidebar grid is already visible. */}
+      <button
+        type="button"
+        onClick={() => setShowGridSheet(true)}
+        aria-label="Abrir navegación de preguntas"
+        className={cn(
+          "fixed bottom-20 right-4 z-40 flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-lg",
+          "lg:hidden",
+        )}
+      >
+        <ClipboardList className="size-4" />
+        {answeredCount}/{questions.length}
+      </button>
+
+      {/* Mobile question grid as a bottom sheet via the existing Dialog
+          primitive — same one we use for the submit-confirm, styled to
+          slide up from the bottom on small screens. */}
+      <Dialog open={showGridSheet} onOpenChange={setShowGridSheet}>
+        <DialogContent className="bottom-0 top-auto max-h-[80vh] translate-y-0 overflow-y-auto rounded-t-2xl rounded-b-none p-0 sm:bottom-auto sm:top-1/2 sm:max-w-md sm:-translate-y-1/2 sm:rounded-2xl">
+          <DialogHeader className="px-6 pt-6">
+            <DialogTitle>Navegación</DialogTitle>
+            <DialogDescription>
+              Tocá una pregunta para saltar a ella.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="px-6 pb-6">
+            <QuestionGrid
+              totalQuestions={questions.length}
+              currentQuestion={currentIndex}
+              getQuestionStatus={getQuestionStatus}
+              onQuestionClick={(i) => {
+                setCurrentIndex(i);
+                setShowGridSheet(false);
+              }}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showConfirmSubmit} onOpenChange={setShowConfirmSubmit}>
         <DialogContent className="sm:max-w-md">

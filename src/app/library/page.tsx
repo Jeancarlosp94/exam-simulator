@@ -156,8 +156,8 @@ export default async function LibraryPage({
 
       {/* ── Plan + usage strip ─────────────────────────────────────────── */}
       <Card>
-        <CardContent className="flex flex-wrap items-center justify-between gap-4 py-4">
-          <div className="flex items-center gap-3">
+        <CardContent className="flex items-center justify-between gap-3 py-3">
+          <div className="flex min-w-0 items-center gap-2">
             <Badge
               variant="outline"
               className={cn(
@@ -175,9 +175,8 @@ export default async function LibraryPage({
                 "Free"
               )}
             </Badge>
-            <p className="text-sm text-muted-foreground">
-              {docsUsedThisMonth} de {plan.limits.documentsPerMonth} PDFs este
-              mes
+            <p className="truncate text-xs text-muted-foreground sm:text-sm">
+              {docsUsedThisMonth}/{plan.limits.documentsPerMonth} docs este mes
             </p>
           </div>
           {plan.plan === "free" ? (
@@ -186,7 +185,8 @@ export default async function LibraryPage({
               className={cn(buttonVariants({ size: "sm" }))}
             >
               <Sparkles />
-              Pasar a Pro
+              <span className="hidden sm:inline">Pasar a Pro</span>
+              <span className="sm:hidden">Pro</span>
             </Link>
           ) : (
             <PortalButton size="sm" />
@@ -248,11 +248,11 @@ export default async function LibraryPage({
                         "ring-2 ring-primary ring-offset-2 ring-offset-background",
                     )}
                   >
-                    <CardContent className="flex items-center gap-4 py-4">
+                    <CardContent className="flex flex-wrap items-center gap-3 py-5 sm:gap-4 sm:py-4">
                       <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                         <ListChecks className="size-5" />
                       </div>
-                      <div className="flex flex-1 flex-col gap-1 overflow-hidden">
+                      <div className="flex min-w-0 flex-1 flex-col gap-1">
                         <h3 className="truncate font-medium text-card-foreground">
                           {q.title}
                         </h3>
@@ -264,35 +264,40 @@ export default async function LibraryPage({
                           </span>
                         </p>
                       </div>
-                      <Link
-                        href={`/quiz/${q.id}`}
-                        className={cn(buttonVariants({ size: "sm" }))}
-                      >
-                        <Play />
-                        Jugar
-                      </Link>
-                      <ShareDialog
-                        quizId={q.id}
-                        quizTitle={q.title}
-                        trigger={
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            title="Compartir link público"
-                          >
-                            <Share2 />
-                          </Button>
-                        }
-                      />
-                      <Link
-                        href={`/quiz/${q.id}/results`}
-                        className={cn(
-                          buttonVariants({ size: "sm", variant: "outline" }),
-                        )}
-                        title="Ver últimos resultados (si los hay)"
-                      >
-                        <Clock />
-                      </Link>
+                      <div className="ml-auto flex w-full items-center gap-2 sm:w-auto">
+                        <Link
+                          href={`/quiz/${q.id}`}
+                          className={cn(
+                            buttonVariants({ size: "sm" }),
+                            "flex-1 sm:flex-none",
+                          )}
+                        >
+                          <Play />
+                          Jugar
+                        </Link>
+                        <ShareDialog
+                          quizId={q.id}
+                          quizTitle={q.title}
+                          trigger={
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              title="Compartir link público"
+                            >
+                              <Share2 />
+                            </Button>
+                          }
+                        />
+                        <Link
+                          href={`/quiz/${q.id}/results`}
+                          className={cn(
+                            buttonVariants({ size: "sm", variant: "outline" }),
+                          )}
+                          title="Ver últimos resultados (si los hay)"
+                        >
+                          <Clock />
+                        </Link>
+                      </div>
                     </CardContent>
                   </Card>
                 </li>

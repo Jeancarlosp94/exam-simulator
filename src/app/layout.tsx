@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { BottomNav } from "@/components/layout/bottom-nav";
+import { InstallPrompt } from "@/components/layout/install-prompt";
 import { SwRegister } from "@/components/pwa/sw-register";
 import { Toaster } from "@/components/ui/sonner";
 import { optionalEnv } from "@/lib/env";
@@ -97,6 +99,10 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  // Keep the layout intact when the on-screen keyboard opens (sign-in,
+  // tutor chat input) — otherwise mobile browsers shrink the viewport
+  // and our fixed bottom nav covers the focused input.
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({
@@ -109,9 +115,11 @@ export default function RootLayout({
       lang="es"
       className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col pb-16 sm:pb-0">
         {children}
         <Toaster richColors closeButton position="top-right" />
+        <BottomNav />
+        <InstallPrompt />
         <SwRegister />
       </body>
     </html>
