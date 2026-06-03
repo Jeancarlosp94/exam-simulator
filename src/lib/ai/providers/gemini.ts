@@ -1,8 +1,13 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
 import { optionalEnv, requireEnv } from "@/lib/env";
+import {
+  buildFlashcardPrompt,
+  FLASHCARD_SYSTEM_PROMPT,
+} from "@/lib/quiz/flashcard-prompts";
 import { buildUserPrompt, SYSTEM_PROMPT } from "@/lib/quiz/prompts";
 import {
+  FlashcardGenerationSchema,
   QuizGenerationSchema,
   BLOOM_LEVELS,
   DIFFICULTIES,
@@ -11,6 +16,8 @@ import {
 
 import {
   QuizGenerationError,
+  type FlashcardGenerationInput,
+  type FlashcardGenerationResult,
   type QuizGenerationInput,
   type QuizGenerationResult,
   type QuizGenerator,
@@ -37,6 +44,28 @@ const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
  * from zod often introduce incompatible fields. If we change the Zod
  * schema, update this in the same commit.
  */
+function buildFlashcardResponseSchema() {
+  return {
+    type: Type.OBJECT,
+    properties: {
+      flashcards: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            front: { type: Type.STRING },
+            back: { type: Type.STRING },
+            bloom_level: { type: Type.STRING, enum: [...BLOOM_LEVELS] },
+            source_chunk_index: { type: Type.INTEGER },
+          },
+          required: ["front", "back", "bloom_level", "source_chunk_index"],
+        },
+      },
+    },
+    required: ["flashcards"],
+  };
+}
+
 function buildResponseSchema() {
   return {
     type: Type.OBJECT,
@@ -217,6 +246,75 @@ export function createGeminiQuizGenerator(): QuizGenerator {
       }
 
       // Unreachable — the loop throws on its last iteration — but TS can't see it.
+      const message =
+        lastError instanceof Error ? lastError.message : "unknown_gemini_error";
+      throw new QuizGenerationError(message, "gemini", lastError);
+    },
+
+    async generateFlashcards({
+      documentText,
+      count,
+    }: FlashcardGenerationInput): Promise<FlashcardGenerationResult> {
+      const userPrompt = buildFlashcardPrompt({ documentText, count });
+
+      let lastError: unknown;
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          const response = await client.models.generateContent({
+            model,
+            contents: [
+              { role: "user", parts: [{ text: FLASHCARD_SYSTEM_PROMPT }] },
+              { role: "user", parts: [{ text: userPrompt }] },
+            ],
+            config: {
+              responseMimeType: "application/json",
+              responseSchema: buildFlashcardResponseSchema(),
+              temperature: 0.7,
+            },
+          });
+
+          const text = response.text;
+          if (!text) {
+            throw new QuizGenerationError(
+              "model returned empty response",
+              "gemini",
+            );
+          }
+
+          const parsed = FlashcardGenerationSchema.safeParse(JSON.parse(text));
+          if (!parsed.success) {
+            throw new QuizGenerationError(
+              `flashcards output failed Zod validation: ${parsed.error.message}`,
+              "gemini",
+            );
+          }
+
+          const usage = response.usageMetadata;
+          return {
+            flashcards: parsed.data.flashcards,
+            usage: {
+              model,
+              inputTokens: usage?.promptTokenCount ?? 0,
+              outputTokens: usage?.candidatesTokenCount ?? 0,
+              cachedTokens: usage?.cachedContentTokenCount ?? 0,
+            },
+          };
+        } catch (error) {
+          lastError = error;
+          if (error instanceof QuizGenerationError) throw error;
+          if (!isTransientGeminiError(error) || attempt === MAX_RETRIES) {
+            const message =
+              error instanceof Error ? error.message : "unknown_gemini_error";
+            throw new QuizGenerationError(message, "gemini", error);
+          }
+          const backoff = BASE_BACKOFF_MS * 2 ** attempt;
+          console.warn(
+            `[gemini-flashcards] transient error on attempt ${attempt + 1}/${MAX_RETRIES + 1}, retrying in ${backoff}ms`,
+          );
+          await sleep(backoff);
+        }
+      }
+
       const message =
         lastError instanceof Error ? lastError.message : "unknown_gemini_error";
       throw new QuizGenerationError(message, "gemini", lastError);

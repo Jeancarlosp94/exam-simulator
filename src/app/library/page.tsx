@@ -1,6 +1,7 @@
 import {
   AlertCircle,
   Brain,
+  BookOpen,
   CheckCircle2,
   Clock,
   FileText,
@@ -365,16 +366,31 @@ export default async function LibraryPage({
                         )}
                       </div>
                       {status === "ready" && (
-                        <GenerateQuizDialog
-                          documentId={doc.id}
-                          documentTitle={doc.title}
-                          trigger={
-                            <Button size="sm" variant="outline">
-                              <Sparkles />
-                              Generar quiz
-                            </Button>
-                          }
-                        />
+                        <>
+                          <GenerateQuizDialog
+                            documentId={doc.id}
+                            documentTitle={doc.title}
+                            trigger={
+                              <Button size="sm" variant="outline">
+                                <Sparkles />
+                                Quiz
+                              </Button>
+                            }
+                          />
+                          <Link
+                            href={`/study/${doc.id}`}
+                            className={cn(
+                              buttonVariants({
+                                size: "sm",
+                                variant: "outline",
+                              }),
+                            )}
+                            title="Estudiar con tarjetas"
+                          >
+                            <BookOpen />
+                            <span className="hidden sm:inline">Tarjetas</span>
+                          </Link>
+                        </>
                       )}
                       <Badge
                         variant="outline"

@@ -1,8 +1,10 @@
-import { CheckCircle2, Sparkles } from "lucide-react";
+import { BookOpen, CheckCircle2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -33,7 +35,7 @@ export default async function ReviewPage() {
   const { data: dueCards, error } = await service
     .from("srs_cards")
     .select(
-      "id, question_id, ease_factor, interval_days, repetitions, next_review_at",
+      "id, question_id, flashcard_id, source_type, ease_factor, interval_days, repetitions, next_review_at",
     )
     .eq("user_id", user.id)
     .lte("next_review_at", new Date().toISOString())
@@ -52,9 +54,9 @@ export default async function ReviewPage() {
         </div>
         <h1 className="text-2xl font-semibold">Nada pendiente</h1>
         <p className="max-w-md text-muted-foreground">
-          No tienes preguntas para repasar ahora mismo. La cola se llena
-          automáticamente con preguntas que respondiste mal o que ya están
-          listas para refrescar.
+          No tienes preguntas ni tarjetas para repasar ahora mismo. La cola se
+          llena automáticamente con material que respondiste mal o que ya está
+          listo para refrescar.
         </p>
         <Link href="/library" className={buttonVariants()}>
           <Sparkles />
@@ -64,11 +66,16 @@ export default async function ReviewPage() {
     );
   }
 
-  // question_id is nullable since Sprint 12 (flashcard cards leave it
-  // null); the page only handles question MCQs for now.
+  // Split the queue by source type. Question cards drive the existing
+  // ReviewPlayer; flashcard cards are summarized as a callout that links
+  // to /study/queue (the dedicated flashcard player).
   const questionDueCards = dueCards.filter(
-    (c): c is typeof c & { question_id: string } => c.question_id !== null,
+    (c): c is typeof c & { question_id: string } =>
+      c.source_type === "question" && c.question_id !== null,
   );
+  const flashcardDueCount = dueCards.filter(
+    (c) => c.source_type === "flashcard",
+  ).length;
 
   const questionIds = questionDueCards.map((c) => c.question_id);
   const { data: questions } = await service
@@ -102,6 +109,28 @@ export default async function ReviewPage() {
     })
     .filter((c): c is NonNullable<typeof c> => c !== null);
 
+  // No usable question cards but flashcards are due — point straight to
+  // the flashcard queue.
+  if (cards.length === 0 && flashcardDueCount > 0) {
+    return (
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-4 px-6 py-12 text-center">
+        <div className="flex size-14 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <BookOpen className="size-6" />
+        </div>
+        <h1 className="text-2xl font-semibold">
+          {flashcardDueCount} {flashcardDueCount === 1 ? "tarjeta" : "tarjetas"}{" "}
+          para repasar
+        </h1>
+        <p className="max-w-md text-muted-foreground">
+          No tienes preguntas en cola, pero sí tarjetas de estudio.
+        </p>
+        <Link href="/study/queue" className={buttonVariants()}>
+          Repasar tarjetas
+        </Link>
+      </main>
+    );
+  }
+
   if (cards.length === 0) {
     return (
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-4 px-6 py-12 text-center">
@@ -126,6 +155,29 @@ export default async function ReviewPage() {
           {cards.length} {cards.length === 1 ? "card" : "cards"} para repasar
         </h1>
       </header>
+
+      {flashcardDueCount > 0 && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                <BookOpen className="size-4" />
+              </div>
+              <p className="text-sm">
+                También tenés <strong>{flashcardDueCount}</strong>{" "}
+                {flashcardDueCount === 1 ? "tarjeta" : "tarjetas"} de estudio
+                pendientes.
+              </p>
+            </div>
+            <Link
+              href="/study/queue"
+              className={cn(buttonVariants({ size: "sm", variant: "outline" }))}
+            >
+              Repasar tarjetas
+            </Link>
+          </CardContent>
+        </Card>
+      )}
 
       <ReviewPlayer cards={cards} />
 
