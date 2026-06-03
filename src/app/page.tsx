@@ -1,5 +1,6 @@
 import { Brain, FileText, Sparkles, Upload } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -27,7 +28,25 @@ const steps = [
   },
 ];
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ code?: string; token_hash?: string; type?: string }>;
+}) {
+  // Defense in depth: if Supabase's allowlist falls back to the Site URL
+  // ("/"), the OAuth callback lands here with `?code=...` instead of at
+  // /auth/callback. Forward to the real handler so the exchange runs and
+  // the user ends up on /library, not the marketing landing.
+  const { code, token_hash, type } = await searchParams;
+  if (code) {
+    redirect(`/auth/callback?code=${encodeURIComponent(code)}&next=/library`);
+  }
+  if (token_hash && type) {
+    redirect(
+      `/auth/callback?token_hash=${encodeURIComponent(token_hash)}&type=${encodeURIComponent(type)}&next=/library`,
+    );
+  }
+
   // Server-side auth check: if logged in, CTAs go straight to /library.
   // If anonymous, they go to /login with a redirect-back hint.
   const supabase = await createSupabaseServerClient();
