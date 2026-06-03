@@ -106,6 +106,32 @@ function buildResponseSchema() {
   };
 }
 
+/**
+ * Retry transient Gemini failures (overload / rate / 5xx) with exponential
+ * backoff. The free tier explicitly returns 503 UNAVAILABLE during spikes
+ * and the docs say "wait a moment and try again" — exactly what this loop
+ * does. Hard model errors (bad request, schema invalid) are NOT retried.
+ */
+const TRANSIENT_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
+const MAX_RETRIES = 3;
+const BASE_BACKOFF_MS = 1500;
+
+function isTransientGeminiError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message ?? "";
+  // The SDK throws an Error whose message contains the JSON error envelope.
+  for (const code of TRANSIENT_STATUS_CODES) {
+    if (msg.includes(`"code":${code}`)) return true;
+  }
+  if (/UNAVAILABLE|RESOURCE_EXHAUSTED|DEADLINE_EXCEEDED/i.test(msg))
+    return true;
+  return false;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export function createGeminiQuizGenerator(): QuizGenerator {
   const apiKey = requireEnv("GEMINI_API_KEY");
   const model = optionalEnv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL);
@@ -119,64 +145,81 @@ export function createGeminiQuizGenerator(): QuizGenerator {
       count,
       difficulty,
     }: QuizGenerationInput): Promise<QuizGenerationResult> {
-      try {
-        // Gemini doesn't have a `system` parameter the way Claude does —
-        // prepend the system prompt to the user content. The prompt
-        // template already wraps the document in <document> tags so
-        // anti-injection still holds.
-        const userPrompt = buildUserPrompt({
-          documentText,
-          count,
-          difficulty,
-        });
+      // Gemini doesn't have a `system` parameter the way Claude does —
+      // prepend the system prompt to the user content. The prompt
+      // template already wraps the document in <document> tags so
+      // anti-injection still holds.
+      const userPrompt = buildUserPrompt({
+        documentText,
+        count,
+        difficulty,
+      });
 
-        const response = await client.models.generateContent({
-          model,
-          contents: [
-            { role: "user", parts: [{ text: SYSTEM_PROMPT }] },
-            { role: "user", parts: [{ text: userPrompt }] },
-          ],
-          config: {
-            responseMimeType: "application/json",
-            responseSchema: buildResponseSchema(),
-            // Lower temperature for more consistent JSON shape. Gemini
-            // ignores temperature for structured output but doesn't error.
-            temperature: 0.7,
-          },
-        });
-
-        const text = response.text;
-        if (!text) {
-          throw new QuizGenerationError(
-            "model returned empty response",
-            "gemini",
-          );
-        }
-
-        const parsed = QuizGenerationSchema.safeParse(JSON.parse(text));
-        if (!parsed.success) {
-          throw new QuizGenerationError(
-            `output failed Zod validation: ${parsed.error.message}`,
-            "gemini",
-          );
-        }
-
-        const usage = response.usageMetadata;
-        return {
-          questions: parsed.data.questions,
-          usage: {
+      let lastError: unknown;
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          const response = await client.models.generateContent({
             model,
-            inputTokens: usage?.promptTokenCount ?? 0,
-            outputTokens: usage?.candidatesTokenCount ?? 0,
-            cachedTokens: usage?.cachedContentTokenCount ?? 0,
-          },
-        };
-      } catch (error) {
-        if (error instanceof QuizGenerationError) throw error;
-        const message =
-          error instanceof Error ? error.message : "unknown_gemini_error";
-        throw new QuizGenerationError(message, "gemini", error);
+            contents: [
+              { role: "user", parts: [{ text: SYSTEM_PROMPT }] },
+              { role: "user", parts: [{ text: userPrompt }] },
+            ],
+            config: {
+              responseMimeType: "application/json",
+              responseSchema: buildResponseSchema(),
+              // Lower temperature for more consistent JSON shape. Gemini
+              // ignores temperature for structured output but doesn't error.
+              temperature: 0.7,
+            },
+          });
+
+          const text = response.text;
+          if (!text) {
+            throw new QuizGenerationError(
+              "model returned empty response",
+              "gemini",
+            );
+          }
+
+          const parsed = QuizGenerationSchema.safeParse(JSON.parse(text));
+          if (!parsed.success) {
+            throw new QuizGenerationError(
+              `output failed Zod validation: ${parsed.error.message}`,
+              "gemini",
+            );
+          }
+
+          const usage = response.usageMetadata;
+          return {
+            questions: parsed.data.questions,
+            usage: {
+              model,
+              inputTokens: usage?.promptTokenCount ?? 0,
+              outputTokens: usage?.candidatesTokenCount ?? 0,
+              cachedTokens: usage?.cachedContentTokenCount ?? 0,
+            },
+          };
+        } catch (error) {
+          lastError = error;
+          if (error instanceof QuizGenerationError) throw error;
+          if (!isTransientGeminiError(error) || attempt === MAX_RETRIES) {
+            const message =
+              error instanceof Error ? error.message : "unknown_gemini_error";
+            throw new QuizGenerationError(message, "gemini", error);
+          }
+          // 1.5s, 3s, 6s — total worst-case wait 10.5s before final attempt.
+          const backoff = BASE_BACKOFF_MS * 2 ** attempt;
+          console.warn(
+            `[gemini] transient error on attempt ${attempt + 1}/${MAX_RETRIES + 1}, retrying in ${backoff}ms`,
+          );
+          await sleep(backoff);
+        }
       }
+
+      // Unreachable — the loop throws on its last iteration — but TS can't see it.
+      const message =
+        lastError instanceof Error ? lastError.message : "unknown_gemini_error";
+      throw new QuizGenerationError(message, "gemini", lastError);
     },
   };
 }
