@@ -215,7 +215,11 @@ export type Database = {
         Row: {
           id: string;
           user_id: string;
-          question_id: string;
+          // Nullable since flashcard cards leave it null; check constraint
+          // in the migration enforces exactly one of question_id/flashcard_id.
+          question_id: string | null;
+          flashcard_id: string | null;
+          source_type: "question" | "flashcard";
           ease_factor: number;
           interval_days: number;
           repetitions: number;
@@ -224,7 +228,9 @@ export type Database = {
         };
         Insert: {
           user_id: string;
-          question_id: string;
+          question_id?: string | null;
+          flashcard_id?: string | null;
+          source_type?: "question" | "flashcard";
           ease_factor?: number;
           interval_days?: number;
           repetitions?: number;
@@ -238,6 +244,28 @@ export type Database = {
           next_review_at?: string;
           last_reviewed_at?: string | null;
         };
+        Relationships: [];
+      };
+      flashcards: {
+        Row: {
+          id: string;
+          user_id: string;
+          document_id: string;
+          front: string;
+          back: string;
+          bloom_level: BloomLevel;
+          source_chunk_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          document_id: string;
+          front: string;
+          back: string;
+          bloom_level: BloomLevel;
+          source_chunk_id?: string | null;
+        };
+        Update: never;
         Relationships: [];
       };
       public_quiz_shares: {

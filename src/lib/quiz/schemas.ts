@@ -91,3 +91,51 @@ export const GenerateQuizRequestSchema = z.object({
 });
 
 export type GenerateQuizRequest = z.infer<typeof GenerateQuizRequestSchema>;
+
+/**
+ * Flashcard generation — front/back pairs, atomic concept recall. The
+ * model returns a flat array; the route handler is responsible for
+ * persisting them, optionally generating an SRS card per flashcard.
+ */
+export const FlashcardSchema = z.object({
+  front: z
+    .string()
+    .min(1)
+    .describe(
+      "Short prompt for the front of the card: a concept name, a question, or a fill-in-the-blank.",
+    ),
+  back: z
+    .string()
+    .min(1)
+    .describe(
+      "Concise answer or definition shown when the card is flipped. 1-3 sentences.",
+    ),
+  bloom_level: z
+    .enum(BLOOM_LEVELS)
+    .describe(
+      "Cognitive level — favor remember/understand for flashcards, occasionally apply.",
+    ),
+  source_chunk_index: z
+    .number()
+    .int()
+    .nonnegative()
+    .describe(
+      "Zero-based index of the document chunk this card is grounded in.",
+    ),
+});
+
+export const FlashcardGenerationSchema = z.object({
+  flashcards: z.array(FlashcardSchema).min(1),
+});
+
+export type GeneratedFlashcard = z.infer<typeof FlashcardSchema>;
+export type FlashcardGeneration = z.infer<typeof FlashcardGenerationSchema>;
+
+export const GenerateFlashcardsRequestSchema = z.object({
+  document_id: z.string().uuid(),
+  count: z.number().int().min(10).max(50),
+});
+
+export type GenerateFlashcardsRequest = z.infer<
+  typeof GenerateFlashcardsRequestSchema
+>;

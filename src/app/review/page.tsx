@@ -64,8 +64,13 @@ export default async function ReviewPage() {
     );
   }
 
-  // Load the joined question payloads in one shot
-  const questionIds = dueCards.map((c) => c.question_id);
+  // question_id is nullable since Sprint 12 (flashcard cards leave it
+  // null); the page only handles question MCQs for now.
+  const questionDueCards = dueCards.filter(
+    (c): c is typeof c & { question_id: string } => c.question_id !== null,
+  );
+
+  const questionIds = questionDueCards.map((c) => c.question_id);
   const { data: questions } = await service
     .from("questions")
     .select(
@@ -75,7 +80,7 @@ export default async function ReviewPage() {
 
   const questionById = new Map((questions ?? []).map((q) => [q.id, q]));
 
-  const cards = dueCards
+  const cards = questionDueCards
     .map((card) => {
       const q = questionById.get(card.question_id);
       if (!q) return null;

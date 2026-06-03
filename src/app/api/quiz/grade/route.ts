@@ -138,6 +138,9 @@ export async function POST(request: Request) {
       { ease_factor: number; interval_days: number; repetitions: number }
     >();
     for (const c of existingCards ?? []) {
+      // question_id is nullable since Sprint 12 (flashcard cards leave it
+      // null), but rows we filtered for in() are question-type by definition.
+      if (!c.question_id) continue;
       existingByQ.set(c.question_id, {
         ease_factor: c.ease_factor,
         interval_days: c.interval_days,
