@@ -13,6 +13,8 @@ Este documento es la lista de sprints **pendientes** con prompts listos para cop
 - ✅ Provider AI switcheable (Gemini default, Anthropic opt-in vía `AI_PROVIDER=anthropic`)
 - ✅ Security hardening: page cap, extract timeout, anti-injection heuristic, PDF magic bytes, security headers (CSP, HSTS, X-Frame-Options), Turnstile opcional, RLS en todas las tablas
 - ✅ Sprint 9: multi-format input (.pdf, .docx, .txt, .md) + OCR fallback para PDFs escaneados (`/api/documents/extract`)
+- ✅ Sprint 10: share links públicos `/q/<slug>` + demo player + regenerar pregunta + OG cards
+- ✅ Sprint 11: mobile-first overhaul (bottom nav, /account, FAB + bottom-sheet grid, swipe, install prompt, 56px touch targets)
 
 ### Lo que falta para "producto realmente útil"
 
@@ -763,4 +765,4 @@ Commit: feat(institutional): LMS plugins (Canvas + Moodle) with white-label.
 
 ---
 
-**Última actualización**: 2026-06-01 (Sprint 9 done — multi-format input + OCR; añadido Sprint 17b — APK sideloadable)
+**Última actualización**: 2026-06-02 (Sprints 9-11 done — multi-format input + OCR, share viral, mobile-first overhaul)
