@@ -1,8 +1,17 @@
-import { Brain, CheckCircle2, Clock, Sparkles, XCircle } from "lucide-react";
+import {
+  Brain,
+  CheckCircle2,
+  Clock,
+  Share2,
+  Sparkles,
+  XCircle,
+} from "lucide-react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { RegenerateQuestionButton } from "@/components/quiz/regenerate-question-button";
 import { ResultsFilter } from "@/components/quiz/results-filter";
+import { ShareDialog } from "@/components/quiz/share-dialog";
 import { TutorDialog } from "@/components/quiz/tutor-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -193,6 +202,16 @@ export default async function QuizResultsPage({
             )}
           </div>
           <div className="flex gap-2">
+            <ShareDialog
+              quizId={quizId}
+              quizTitle={quiz.title}
+              trigger={
+                <Button variant="outline">
+                  <Share2 />
+                  Compartir
+                </Button>
+              }
+            />
             <Link
               href={`/quiz/${quizId}`}
               className={cn(buttonVariants({ variant: "outline" }))}
@@ -305,8 +324,9 @@ export default async function QuizResultsPage({
                       </div>
                     )}
 
-                    {!isCorrect && (
-                      <div className="flex justify-end">
+                    <div className="flex justify-end gap-2">
+                      <RegenerateQuestionButton questionId={q.id} />
+                      {!isCorrect && (
                         <TutorDialog
                           questionId={q.id}
                           attemptId={attempt.id}
@@ -318,8 +338,8 @@ export default async function QuizResultsPage({
                             </Button>
                           }
                         />
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               </li>

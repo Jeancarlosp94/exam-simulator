@@ -7,6 +7,7 @@ import {
   Loader2,
   ListChecks,
   Play,
+  Share2,
   Sparkles,
   Upload,
 } from "lucide-react";
@@ -15,6 +16,7 @@ import { redirect } from "next/navigation";
 
 import { PortalButton } from "@/components/billing/portal-button";
 import { GenerateQuizDialog } from "@/components/quiz/generate-quiz-dialog";
+import { ShareDialog } from "@/components/quiz/share-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -269,6 +271,19 @@ export default async function LibraryPage({
                         <Play />
                         Jugar
                       </Link>
+                      <ShareDialog
+                        quizId={q.id}
+                        quizTitle={q.title}
+                        trigger={
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            title="Compartir link público"
+                          >
+                            <Share2 />
+                          </Button>
+                        }
+                      />
                       <Link
                         href={`/quiz/${q.id}/results`}
                         className={cn(

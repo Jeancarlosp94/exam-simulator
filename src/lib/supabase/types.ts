@@ -148,7 +148,16 @@ export type Database = {
           difficulty: Difficulty;
           source_chunk_id?: string | null;
         };
-        Update: never;
+        // Regenerate-question updates these in place; id, quiz_id, position,
+        // source_chunk_id are immutable to preserve attempt/SRS integrity.
+        Update: {
+          prompt?: string;
+          options?: QuestionOption[];
+          correct_label?: string;
+          explanation?: string;
+          bloom_level?: BloomLevel;
+          difficulty?: Difficulty;
+        };
         Relationships: [];
       };
       attempts: {
@@ -228,6 +237,28 @@ export type Database = {
           repetitions?: number;
           next_review_at?: string;
           last_reviewed_at?: string | null;
+        };
+        Relationships: [];
+      };
+      public_quiz_shares: {
+        Row: {
+          slug: string;
+          quiz_id: string;
+          created_by: string;
+          view_count: number;
+          expires_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          slug: string;
+          quiz_id: string;
+          created_by: string;
+          view_count?: number;
+          expires_at?: string | null;
+        };
+        Update: {
+          view_count?: number;
+          expires_at?: string | null;
         };
         Relationships: [];
       };
