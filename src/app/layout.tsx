@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
 
+import { AccountToggle } from "@/components/layout/account-toggle";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { InstallPrompt } from "@/components/layout/install-prompt";
 import { ModeToggle } from "@/components/layout/mode-toggle";
@@ -130,6 +131,7 @@ export default async function RootLayout({
         {children}
         <Toaster richColors closeButton position="top-right" />
         <ModeToggle />
+        <AccountToggle />
         <BottomNav />
         <InstallPrompt />
         <SwRegister />
