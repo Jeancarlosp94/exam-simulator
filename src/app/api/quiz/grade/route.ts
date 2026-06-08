@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { applySm2, qualityFromCorrectness } from "@/lib/srs/sm2";
+import { recordActivity } from "@/lib/streak";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -200,6 +201,10 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+
+  // Daily activity for streak — fire-and-forget so a slow write doesn't
+  // delay the user landing on the results page.
+  void recordActivity(user.id, "quiz");
 
   return NextResponse.json({
     already_graded: false,

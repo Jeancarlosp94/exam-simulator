@@ -7,6 +7,7 @@ import {
   StudyGuideGenerationError,
 } from "@/lib/study/generator";
 import { STUDY_MODES } from "@/lib/study/modes";
+import { recordActivity } from "@/lib/streak";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 import type { ConceptMapEdge } from "@/lib/supabase/types";
@@ -297,6 +298,9 @@ export async function POST(
         last_active_at: now,
       })
       .eq("id", session_id);
+
+    // Daily activity for streak — fire-and-forget.
+    void recordActivity(user.id, "study_chunk");
 
     return NextResponse.json({
       retrieval_is_correct: retrievalIsCorrect,

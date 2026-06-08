@@ -17,6 +17,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { PortalButton } from "@/components/billing/portal-button";
+import { StreakBadge } from "@/components/layout/streak-badge";
 import { GenerateQuizDialog } from "@/components/quiz/generate-quiz-dialog";
 import { ShareDialog } from "@/components/quiz/share-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -131,9 +132,14 @@ export default async function LibraryPage({
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-10 px-6 py-12">
-      <header className="flex items-end justify-between">
+      <header className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <h1 className="text-3xl font-semibold tracking-tight">Biblioteca</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-semibold tracking-tight">
+              Biblioteca
+            </h1>
+            <StreakBadge userId={user.id} />
+          </div>
           <p className="text-sm text-muted-foreground">
             Tus PDFs y los cuestionarios generados a partir de ellos.
           </p>

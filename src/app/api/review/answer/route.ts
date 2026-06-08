@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { applySm2, qualityFromCorrectness, type Quality } from "@/lib/srs/sm2";
+import { recordActivity } from "@/lib/streak";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -97,6 +98,9 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+
+  // Daily activity for streak — fire-and-forget.
+  void recordActivity(user.id, "review");
 
   return NextResponse.json({
     next_review_at: next.next_review_at,

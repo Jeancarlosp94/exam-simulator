@@ -58,6 +58,7 @@ export type Database = {
           email: string;
           display_name: string | null;
           theme_settings: ThemeSettings;
+          email_reminder_enabled: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -66,11 +67,35 @@ export type Database = {
           email: string;
           display_name?: string | null;
           theme_settings?: ThemeSettings;
+          email_reminder_enabled?: boolean;
         };
         Update: {
           email?: string;
           display_name?: string | null;
           theme_settings?: ThemeSettings;
+          email_reminder_enabled?: boolean;
+        };
+        Relationships: [];
+      };
+      daily_activity: {
+        Row: {
+          user_id: string;
+          activity_date: string;
+          reviews_completed: number;
+          quizzes_completed: number;
+          study_chunks_done: number;
+        };
+        Insert: {
+          user_id: string;
+          activity_date: string;
+          reviews_completed?: number;
+          quizzes_completed?: number;
+          study_chunks_done?: number;
+        };
+        Update: {
+          reviews_completed?: number;
+          quizzes_completed?: number;
+          study_chunks_done?: number;
         };
         Relationships: [];
       };
@@ -448,7 +473,20 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      get_user_streak: {
+        Args: { p_user_id: string };
+        Returns: number;
+      };
+      increment_daily_activity: {
+        Args: {
+          p_user_id: string;
+          p_activity_date: string;
+          p_column: string;
+        };
+        Returns: undefined;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };
