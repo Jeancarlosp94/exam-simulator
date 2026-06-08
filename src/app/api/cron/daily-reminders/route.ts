@@ -1,34 +1,29 @@
 import { NextResponse } from "next/server";
 
-import { envOrNull, isPlaceholder } from "@/lib/env";
+import { envOrNull } from "@/lib/env";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 
 /**
  * GET /api/cron/daily-reminders
  *
  * Vercel Cron entry. Configured in vercel.json to fire daily at 14:00
- * UTC (~09:00 Ecuador). For each user with email_reminder_enabled=true
- * and at least one due SRS card, sends a "tenés N tarjetas listas" email.
+ * UTC (~09:00 Ecuador). Sends a Web Push notification to every device
+ * subscription belonging to a user with at least one due SRS card.
  *
- * Auth: requires `Authorization: Bearer <CRON_SECRET>`. Vercel Cron
- * sends the secret automatically when configured.
+ * Auth: requires `Authorization: Bearer <CRON_SECRET>` when CRON_SECRET
+ * is set (Vercel Cron sends it automatically).
  *
- * Current state — stubbed: the route logs candidates but doesn't send
- * because Resend isn't wired (no verified domain). To activate:
+ * No email path here — Sprint 13b replaced email with Web Push so we
+ * don't need a verified domain or third-party provider. VAPID keys are
+ * generated once via `npx web-push generate-vapid-keys` and stored as
+ * NEXT_PUBLIC_VAPID_PUBLIC_KEY + VAPID_PRIVATE_KEY env vars.
  *
- *   1. Set RESEND_API_KEY in Vercel env (real key, not placeholder)
- *   2. Verify your sending domain in Resend
- *   3. Set RESEND_FROM_EMAIL to your sender (e.g. "Quizen <noreply@quizen.app>")
- *   4. Uncomment the resend.emails.send block below
- *   5. Redeploy
- *
- * Cap per run: 100 to stay under Resend free-tier daily quota. If you
- * grow past that, switch to batch mode or page through users.
+ * Cap per run: 500 subscription sends. Beyond that we'd want to page.
  */
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const MAX_PER_RUN = 100;
+const MAX_SENDS_PER_RUN = 500;
 
 export async function GET(request: Request) {
   // Auth: Vercel Cron sends Bearer <CRON_SECRET> when configured.
@@ -40,88 +35,129 @@ export async function GET(request: Request) {
     }
   }
 
-  const service = getSupabaseServiceClient();
+  const vapidPublic = envOrNull("NEXT_PUBLIC_VAPID_PUBLIC_KEY");
+  const vapidPrivate = envOrNull("VAPID_PRIVATE_KEY");
+  const vapidContact =
+    envOrNull("VAPID_CONTACT_EMAIL") ?? "mailto:noreply@quizen.app";
 
-  // Eligible users: opted-in + have at least one SRS card due now.
-  const nowIso = new Date().toISOString();
-  const { data: candidates, error: candidatesError } = await service
-    .from("profiles")
-    .select("id, email")
-    .eq("email_reminder_enabled", true)
-    .limit(MAX_PER_RUN * 2); // grab more than we'll send; we'll filter by due cards next
-
-  if (candidatesError) {
+  if (!vapidPublic || !vapidPrivate) {
     return NextResponse.json(
-      { error: "candidates_query_failed", detail: candidatesError.message },
-      { status: 500 },
+      {
+        sent: 0,
+        skipped: 0,
+        reason: "vapid_not_configured",
+        detail:
+          "Set NEXT_PUBLIC_VAPID_PUBLIC_KEY + VAPID_PRIVATE_KEY. Generate with `npx web-push generate-vapid-keys`.",
+      },
+      { status: 200 },
     );
   }
 
-  if (!candidates || candidates.length === 0) {
-    return NextResponse.json({ sent: 0, skipped: 0, reason: "no_candidates" });
-  }
+  const service = getSupabaseServiceClient();
+  const nowIso = new Date().toISOString();
 
-  // Count due cards per user. Single query, group client-side.
-  const userIds = candidates.map((c) => c.id);
-  const { data: dueRows } = await service
+  // 1. Users who have at least one due SRS card.
+  const { data: dueRows, error: dueError } = await service
     .from("srs_cards")
     .select("user_id")
-    .in("user_id", userIds)
     .lte("next_review_at", nowIso);
+  if (dueError) {
+    return NextResponse.json(
+      { error: "due_query_failed", detail: dueError.message },
+      { status: 500 },
+    );
+  }
 
   const dueCount = new Map<string, number>();
   for (const row of dueRows ?? []) {
     dueCount.set(row.user_id, (dueCount.get(row.user_id) ?? 0) + 1);
   }
+  const userIds = Array.from(dueCount.keys());
+  if (userIds.length === 0) {
+    return NextResponse.json({ sent: 0, skipped: 0, reason: "no_due_users" });
+  }
 
-  const toSend = candidates
-    .filter((c) => (dueCount.get(c.id) ?? 0) > 0)
-    .slice(0, MAX_PER_RUN);
-
-  // ── Send (or stub) ───────────────────────────────────────────────────
-  const resendKey = envOrNull("RESEND_API_KEY");
-  const fromEmail = envOrNull("RESEND_FROM_EMAIL");
-  const emailReady = resendKey && !isPlaceholder(resendKey) && fromEmail;
-
-  if (!emailReady) {
-    // Stub: log who we WOULD have emailed. Useful for verifying the
-    // pipeline works before flipping the switch.
-    for (const u of toSend) {
-      console.info(
-        `[cron/daily-reminders] (stub) would email ${u.email}: ${dueCount.get(u.id)} due cards`,
-      );
-    }
+  // 2. Fetch push subscriptions for those users.
+  const { data: subs, error: subsError } = await service
+    .from("push_subscriptions")
+    .select("id, user_id, endpoint, p256dh, auth")
+    .in("user_id", userIds)
+    .limit(MAX_SENDS_PER_RUN);
+  if (subsError) {
+    return NextResponse.json(
+      { error: "subs_query_failed", detail: subsError.message },
+      { status: 500 },
+    );
+  }
+  if (!subs || subs.length === 0) {
     return NextResponse.json({
       sent: 0,
-      skipped: toSend.length,
-      reason: "email_provider_not_configured",
+      skipped: 0,
+      reason: "no_subscriptions",
     });
   }
 
-  // ── Live send path (uncomment when Resend is wired) ──────────────────
-  //
-  // const { Resend } = await import("resend");
-  // const resend = new Resend(resendKey);
-  // let sent = 0;
-  // for (const u of toSend) {
-  //   const count = dueCount.get(u.id) ?? 0;
-  //   try {
-  //     await resend.emails.send({
-  //       from: fromEmail,
-  //       to: u.email,
-  //       subject: `Quizen: ${count} ${count === 1 ? "tarjeta" : "tarjetas"} listas para repasar`,
-  //       html: `<p>Buenos días.</p><p>Tenés <strong>${count}</strong> ${count === 1 ? "tarjeta" : "tarjetas"} en tu cola de repaso.</p><p><a href="https://quizen.app/review">Repasá ahora →</a></p>`,
-  //     });
-  //     sent++;
-  //   } catch (err) {
-  //     console.warn(`[cron/daily-reminders] send failed for ${u.email}:`, err);
-  //   }
-  // }
-  // return NextResponse.json({ sent, skipped: toSend.length - sent });
+  // 3. Send. Dynamic import keeps web-push out of the cold-start surface
+  //    for routes that don't need it.
+  const webpush = (await import("web-push")).default;
+  webpush.setVapidDetails(vapidContact, vapidPublic, vapidPrivate);
+
+  let sent = 0;
+  const deadSubs: string[] = [];
+
+  await Promise.all(
+    subs.map(async (s) => {
+      const count = dueCount.get(s.user_id) ?? 0;
+      const payload = JSON.stringify({
+        title: "Quizen",
+        body: `Tenés ${count} ${count === 1 ? "tarjeta" : "tarjetas"} listas para repasar.`,
+        url: "/review",
+      });
+      try {
+        await webpush.sendNotification(
+          {
+            endpoint: s.endpoint,
+            keys: { p256dh: s.p256dh, auth: s.auth },
+          },
+          payload,
+        );
+        sent++;
+      } catch (err) {
+        // 404/410 = subscription is dead, browser revoked it. Anything
+        // else (network blip, throttling) we just log and skip.
+        const status = (err as { statusCode?: number }).statusCode;
+        if (status === 404 || status === 410) {
+          deadSubs.push(s.id);
+        } else {
+          console.warn(
+            `[cron/daily-reminders] send failed for sub ${s.id}:`,
+            err instanceof Error ? err.message : err,
+          );
+        }
+      }
+    }),
+  );
+
+  // 4. Cleanup dead subscriptions.
+  if (deadSubs.length > 0) {
+    await service
+      .from("push_subscriptions")
+      .delete()
+      .in("id", deadSubs)
+      .then(
+        () => {},
+        (e: { message?: string }) => {
+          console.warn(
+            "[cron/daily-reminders] dead-sub cleanup failed:",
+            e?.message,
+          );
+        },
+      );
+  }
 
   return NextResponse.json({
-    sent: 0,
-    skipped: toSend.length,
-    reason: "live_send_disabled_by_default",
+    sent,
+    skipped: subs.length - sent - deadSubs.length,
+    cleaned_dead: deadSubs.length,
   });
 }

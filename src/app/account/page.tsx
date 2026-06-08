@@ -10,7 +10,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { ReminderToggle } from "@/components/account/reminder-toggle";
+import { PushToggle } from "@/components/account/push-toggle";
 import { SignOutButton } from "@/components/account/sign-out-button";
 import { ThemePicker } from "@/components/account/theme-picker";
 import { PortalButton } from "@/components/billing/portal-button";
@@ -18,7 +18,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getUserPlan } from "@/lib/billing/plan";
-import { isPlaceholder } from "@/lib/env";
 import { parseTheme, THEME_COOKIE } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -48,15 +47,11 @@ export default async function AccountPage() {
   const service = getSupabaseServiceClient();
   const { data: profile } = await service
     .from("profiles")
-    .select("theme_settings, email_reminder_enabled")
+    .select("theme_settings")
     .eq("id", user.id)
     .maybeSingle();
   const initialTheme =
     profile?.theme_settings ?? parseTheme(cookieStore.get(THEME_COOKIE)?.value);
-
-  // Email reminders depend on RESEND_API_KEY + a verified domain — gate
-  // the toggle so users don't opt into something that silently never sends.
-  const emailAvailable = !isPlaceholder(process.env.RESEND_API_KEY);
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
@@ -151,23 +146,18 @@ export default async function AccountPage() {
         <CardContent className="flex flex-col gap-3 py-6">
           <div className="flex items-center gap-2">
             <Bell className="size-4 text-primary" />
-            <h2 className="text-sm font-semibold">Recordatorios por email</h2>
+            <h2 className="text-sm font-semibold">Notificaciones</h2>
           </div>
           <p className="text-xs text-muted-foreground">
-            Recibí un email cada mañana con las tarjetas y preguntas listas para
-            repasar. Sirve para mantener tu racha de estudio.
+            Recibí una notificación cada mañana con las tarjetas listas para
+            repasar. Funciona aunque la app esté cerrada (en Android — en iOS
+            necesitás tener la PWA instalada en pantalla de inicio).
           </p>
-          <ReminderToggle
-            initial={profile?.email_reminder_enabled ?? false}
-            available={emailAvailable}
-          />
-          {!emailAvailable && (
-            <p className="text-xs text-amber-400">
-              Función disponible cuando configures un proveedor de email
-              (Resend) con un dominio verificado. Mientras tanto el toggle está
-              deshabilitado.
-            </p>
-          )}
+          <PushToggle />
+          <p className="text-xs text-muted-foreground">
+            Activá por dispositivo. Si usás tablet y celular y querés notif en
+            ambos, activá desde cada uno.
+          </p>
         </CardContent>
       </Card>
 

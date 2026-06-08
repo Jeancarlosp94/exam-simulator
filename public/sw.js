@@ -13,7 +13,7 @@
  * the activate step deletes old caches.
  */
 
-const CACHE_NAME = "quizen-shell-v3";
+const CACHE_NAME = "quizen-shell-v4";
 
 const SHELL_URLS = [
   "/",
@@ -109,4 +109,50 @@ self.addEventListener("fetch", (event) => {
       }),
     );
   }
+});
+
+// ─── Web Push (Sprint 13b) ────────────────────────────────────────────
+// Cron sends { title, body, url } as the payload. We render a native
+// notification and route clicks to the embedded url (default /review).
+self.addEventListener("push", (event) => {
+  let payload = { title: "Quizen", body: "Tenés contenido para repasar." };
+  if (event.data) {
+    try {
+      payload = { ...payload, ...event.data.json() };
+    } catch {
+      payload.body = event.data.text();
+    }
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: "/icons/icon.svg",
+      badge: "/icons/icon.svg",
+      tag: "quizen-reminder",
+      renotify: false,
+      data: { url: payload.url || "/review" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || "/review";
+
+  // Focus an existing tab if any; otherwise open a new one. This avoids
+  // stacking duplicate tabs every time the user taps a notification.
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clients) => {
+        for (const client of clients) {
+          if ("focus" in client) {
+            client.navigate(targetUrl).catch(() => {});
+            return client.focus();
+          }
+        }
+        return self.clients.openWindow(targetUrl);
+      }),
+  );
 });
