@@ -24,7 +24,7 @@ export async function AccountToggle() {
       href="/account"
       aria-label="Cuenta y apariencia"
       title="Cuenta y apariencia"
-      className="fixed right-14 top-3 z-30 hidden size-9 items-center justify-center rounded-full border border-border bg-card/80 text-muted-foreground shadow-sm backdrop-blur transition-colors hover:bg-card hover:text-foreground sm:flex"
+      className="fixed right-14 top-3 z-30 hidden size-9 items-center justify-center rounded-full border border-border bg-card/80 text-muted-foreground shadow-sm backdrop-blur transition-colors hover:bg-card hover:text-foreground lg:flex"
     >
       <UserRound className="size-4" />
     </Link>

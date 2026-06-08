@@ -50,7 +50,7 @@ export function ModePicker({ documentId }: Props) {
   }
 
   return (
-    <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {STUDY_MODE_LIST.map((mode) => {
         const isPending = pendingMode === mode.id;
         const anyPending = pendingMode !== null;

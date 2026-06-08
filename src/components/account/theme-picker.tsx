@@ -68,7 +68,7 @@ export function ThemePicker({ initial }: Props) {
   return (
     <div className="flex flex-col gap-4">
       <PickerSection title="Paleta">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
           {PALETTES.map((p) => (
             <SwatchButton
               key={p.id}

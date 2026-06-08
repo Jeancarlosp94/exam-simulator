@@ -127,7 +127,7 @@ export default async function RootLayout({
       data-mode={theme.mode}
       className={`${brightnessClass} ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col pb-16 sm:pb-0">
+      <body className="min-h-full flex flex-col pb-16 lg:pb-0">
         {children}
         <Toaster richColors closeButton position="top-right" />
         <ModeToggle />
