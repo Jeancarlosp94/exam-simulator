@@ -49,12 +49,23 @@ export function BottomNav() {
                 href={href}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "flex flex-col items-center gap-1 py-2 text-xs transition-colors",
+                  "relative flex flex-col items-center gap-1 py-2 text-xs transition-colors active:scale-95",
                   isActive
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground",
                 )}
+                style={{ transitionDuration: "var(--motion-fast)" }}
               >
+                {/* Active dot — fades in under the active item. Drives
+                    the "selected" cue without a heavy pill background. */}
+                <span
+                  aria-hidden
+                  className={cn(
+                    "absolute top-0 h-0.5 w-8 rounded-full bg-primary transition-opacity",
+                    isActive ? "opacity-100" : "opacity-0",
+                  )}
+                  style={{ transitionDuration: "var(--motion-base)" }}
+                />
                 <Icon className="size-5" aria-hidden />
                 <span>{label}</span>
               </Link>

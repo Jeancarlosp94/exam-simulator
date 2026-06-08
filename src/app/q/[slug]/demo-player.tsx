@@ -135,7 +135,8 @@ export function DemoPlayer({ quizTitle, questions }: Props) {
                       }))
                     }
                     className={cn(
-                      "flex w-full items-start gap-3 rounded-lg border p-3 text-left text-sm transition-colors",
+                      "flex w-full items-start gap-3 rounded-lg border p-3 text-left text-sm transition-all duration-100",
+                      !isRevealed && "active:scale-[0.98]",
                       !isRevealed && isUserChoice
                         ? "border-primary/50 bg-primary/10"
                         : "border-border bg-card/40 hover:border-primary/30",

@@ -58,8 +58,9 @@ export function ModePicker({ documentId }: Props) {
           <Card
             key={mode.id}
             className={cn(
-              "transition-colors",
-              !anyPending && "hover:border-primary/40 hover:bg-card/70",
+              "transition-all duration-100",
+              !anyPending &&
+                "hover:border-primary/40 hover:bg-card/70 active:scale-[0.98]",
             )}
           >
             <CardContent className="flex h-full flex-col gap-3 py-5">

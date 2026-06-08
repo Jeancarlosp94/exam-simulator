@@ -77,7 +77,7 @@ export function InstallPrompt() {
       role="region"
       aria-label="Instalar Quizen"
       className={cn(
-        "fixed inset-x-3 z-50 rounded-xl border border-border bg-card/95 p-3 shadow-lg backdrop-blur",
+        "fixed inset-x-3 z-50 rounded-xl border border-border bg-card/95 p-3 shadow-lg backdrop-blur animate-slide-up-fade",
         "bottom-20 sm:bottom-4 sm:left-auto sm:right-4 sm:w-80",
       )}
     >

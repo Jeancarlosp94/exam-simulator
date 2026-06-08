@@ -58,7 +58,7 @@ export function TimerOverlay({ workMinutes, breakMinutes }: Props) {
       role="region"
       aria-label="Temporizador"
       className={cn(
-        "fixed bottom-20 right-3 z-30 flex items-center gap-2 rounded-full border border-border bg-card/95 px-3 py-1.5 text-sm shadow-lg backdrop-blur sm:bottom-4",
+        "fixed bottom-20 right-3 z-30 flex items-center gap-2 rounded-full border border-border bg-card/95 px-3 py-1.5 text-sm shadow-lg backdrop-blur animate-slide-up-fade sm:bottom-4",
         phase === "break"
           ? "border-emerald-500/40 text-emerald-300"
           : "border-primary/40 text-primary",

@@ -240,5 +240,94 @@
   }
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+ * Motion system — app-like transitions and tap feedback
+ *
+ * Tokens used across the app for consistency:
+ *   --motion-fast       interactions: button press, hover (100ms)
+ *   --motion-base       enter/exit, dialog (200ms)
+ *   --motion-slow       page transitions (300ms)
+ *   --motion-ease       spring-ish curve for "feels good on touch"
+ *
+ * Browsers with prefers-reduced-motion get all of these collapsed to
+ * near-instant by the override at the bottom.
+ * ──────────────────────────────────────────────────────────────────── */
+
+:root {
+  --motion-fast: 100ms;
+  --motion-base: 200ms;
+  --motion-slow: 300ms;
+  --motion-ease: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Cross-document View Transitions — native browser fade+slide between
+ * navigations. Works in Chromium 126+ (Android Chrome, Edge), graceful
+ * no-op everywhere else. */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root) {
+  animation: vt-fade-out var(--motion-base) var(--motion-ease) both;
+}
+
+::view-transition-new(root) {
+  animation: vt-fade-in-up var(--motion-base) var(--motion-ease) both;
+}
+
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes vt-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Slide-up entry for fixed UI elements (InstallPrompt, ModeToggle,
+ * TimerOverlay). Use via the `animate-slide-up-fade` utility. */
+@keyframes slide-up-fade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@utility animate-slide-up-fade {
+  animation: slide-up-fade var(--motion-base) var(--motion-ease) both;
+}
+
+/* prefers-reduced-motion — collapse all animation/transition durations.
+ * Per WAI: matches users with vestibular disorders or motion sensitivity.
+ * Required for WCAG 2.3.3 AAA. We aim for AA but respect this on principle. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
   }
 }
