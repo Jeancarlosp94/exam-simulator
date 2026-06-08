@@ -18,6 +18,8 @@ Este documento es la lista de sprints **pendientes** con prompts listos para cop
 - ✅ Sprint 12: flashcards (`/study/[doc]` + `/study/queue`) con SM-2 Again/Hard/Good/Easy + cola unificada con quiz questions
 - ✅ Sprint 12b: modo guía didáctico con técnica seleccionable (Pomodoro, Bloque Profundo, Feynman, Repaso Rápido) — basado en Dunlosky 2013, Mayer, Bisra 2018
 - ✅ Sprint 12c: sistema de temas (4 paletas × focus/relax × dark/light) con tokens OKLCH modulares + manual de marca (`BRAND.md`)
+- ✅ Motion polish: View Transitions API + tap feedback + reduce-motion respect
+- ✅ Sprint 13: streaks (🔥) live en `/library` + email reminders opt-in (cron stub listo para activar con Resend + dominio verificado)
 - ✅ Tutor migrado a Gemini (sin dependencia de Anthropic) + retry exponencial en quiz/flashcard gen
 
 ### Lo que falta para "producto realmente útil"
