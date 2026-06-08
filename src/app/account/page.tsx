@@ -1,4 +1,4 @@
-import { LogOut, Palette, Sparkles, UserRound } from "lucide-react";
+import { ArrowLeft, LogOut, Palette, Sparkles, UserRound } from "lucide-react";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -47,10 +47,22 @@ export default async function AccountPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
+      <Link
+        href="/library"
+        className={cn(
+          buttonVariants({ variant: "ghost", size: "sm" }),
+          "self-start -ml-2 text-muted-foreground hover:text-foreground",
+        )}
+      >
+        <ArrowLeft />
+        Volver a biblioteca
+      </Link>
+
       <header className="flex flex-col gap-1">
         <h1 className="text-3xl font-semibold tracking-tight">Cuenta</h1>
         <p className="text-sm text-muted-foreground">
-          Tu sesión y suscripción.
+          Tu sesión, suscripción y apariencia. Los cambios se guardan al
+          instante.
         </p>
       </header>
 

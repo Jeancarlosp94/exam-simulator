@@ -39,7 +39,24 @@ export function ThemePicker({ initial }: Props) {
         body: JSON.stringify(next),
       });
       if (!res.ok) {
-        toast.error("No pudimos guardar la preferencia. Igual la ves ya.");
+        const payload = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          detail?: string;
+        };
+        // The migration adds the theme_settings column; if it isn't
+        // applied, the update fails with a Postgres "column does not
+        // exist" error. Surface that so the dev knows what to do.
+        const detail = payload.detail ?? payload.error ?? "";
+        if (/theme_settings|column|relation/i.test(detail)) {
+          toast.error(
+            "Falta aplicar la migración 0007 en Supabase. El tema se ve igual pero no persiste entre dispositivos.",
+            { duration: 6000 },
+          );
+        } else {
+          toast.error(
+            "No pudimos guardar en el servidor. Igual la ves aplicada localmente.",
+          );
+        }
       }
     } catch {
       // Cookie + DOM already updated; persistence is best-effort.
