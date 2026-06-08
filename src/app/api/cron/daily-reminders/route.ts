@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { envOrNull } from "@/lib/env";
+import { logSecurityEvent } from "@/lib/guard";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 
 /**
@@ -31,8 +32,18 @@ export async function GET(request: Request) {
   if (cronSecret) {
     const auth = request.headers.get("authorization");
     if (auth !== `Bearer ${cronSecret}`) {
+      logSecurityEvent({
+        kind: "auth_failed",
+        route: "/api/cron/daily-reminders",
+      });
       return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     }
+  } else {
+    // Unconfigured CRON_SECRET in production is a misconfiguration —
+    // anyone can hit this route. Log so the operator notices in Vercel logs.
+    console.warn(
+      "[cron/daily-reminders] CRON_SECRET is not set — route is publicly callable. Set the env var in Vercel.",
+    );
   }
 
   const vapidPublic = envOrNull("NEXT_PUBLIC_VAPID_PUBLIC_KEY");

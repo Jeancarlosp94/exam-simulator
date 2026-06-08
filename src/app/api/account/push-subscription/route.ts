@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { logSecurityEvent } from "@/lib/guard";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -34,7 +36,33 @@ export async function POST(request: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
+    logSecurityEvent({
+      kind: "auth_failed",
+      route: "/api/account/push-subscription",
+    });
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  // Prevent push-subscription flood / abuse (one user spamming 1000
+  // fake endpoints).
+  const rl = await checkRateLimit(
+    { prefix: "push-sub", requests: 20, window: "1 h" },
+    user.id,
+  );
+  if (!rl.ok) {
+    logSecurityEvent({
+      kind: "rate_limit_hit",
+      route: "/api/account/push-subscription",
+      userId: user.id,
+      retryAfter: rl.retryAfterSeconds,
+    });
+    return NextResponse.json(
+      { error: "rate_limited", retry_after_seconds: rl.retryAfterSeconds },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rl.retryAfterSeconds) },
+      },
+    );
   }
 
   let raw: unknown;
@@ -85,6 +113,19 @@ export async function DELETE(request: Request) {
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  const rl = await checkRateLimit(
+    { prefix: "push-sub-del", requests: 20, window: "1 h" },
+    user.id,
+  );
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "rate_limited", retry_after_seconds: rl.retryAfterSeconds },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rl.retryAfterSeconds) },
+      },
+    );
   }
 
   let raw: unknown;

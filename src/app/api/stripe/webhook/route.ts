@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 
 import { requireEnv } from "@/lib/env";
+import { logSecurityEvent } from "@/lib/guard";
 import { getStripeClient } from "@/lib/stripe";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 
@@ -45,6 +46,11 @@ export async function POST(request: Request) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "signature_verification_failed";
+    logSecurityEvent({
+      kind: "invalid_signature",
+      route: "/api/stripe/webhook",
+      provider: "stripe",
+    });
     return NextResponse.json(
       { error: "invalid_signature", detail: message },
       { status: 400 },

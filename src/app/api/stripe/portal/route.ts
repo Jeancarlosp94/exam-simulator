@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { optionalEnv } from "@/lib/env";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { getStripeClient } from "@/lib/stripe";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
@@ -25,6 +26,19 @@ export async function POST() {
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  const rl = await checkRateLimit(
+    { prefix: "stripe-portal", requests: 10, window: "1 h" },
+    user.id,
+  );
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "rate_limited", retry_after_seconds: rl.retryAfterSeconds },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rl.retryAfterSeconds) },
+      },
+    );
   }
 
   const service = getSupabaseServiceClient();

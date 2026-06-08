@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   generateChunkPrompts,
   gradeExplanation,
@@ -68,6 +69,21 @@ export async function POST(
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  // Generous because chunk loops can fire 5-15 prepare_chunk +
+  // submit_chunk per session. 300/h covers 10 sessions/h comfortably.
+  const rl = await checkRateLimit(
+    { prefix: "study-advance", requests: 300, window: "1 h" },
+    user.id,
+  );
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "rate_limited", retry_after_seconds: rl.retryAfterSeconds },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rl.retryAfterSeconds) },
+      },
+    );
   }
 
   const { session_id } = await context.params;

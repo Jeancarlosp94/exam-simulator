@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 
+import { logSecurityEvent } from "@/lib/guard";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
@@ -14,10 +15,25 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  *
  * On any failure we redirect back to /login with ?error=auth_failed
  * AND ?detail=<reason> so we can see in the URL what went wrong.
+ *
+ * Security: `next` is whitelisted to in-app paths. An attacker who
+ * crafts ?next=//evil.com or ?next=https://evil.com could otherwise turn
+ * /auth/callback into an open redirect, useful for phishing.
  */
+function safeNext(raw: string | null): string {
+  if (!raw) return "/library";
+  // Must start with a single "/" — not "//" (protocol-relative),
+  // backslash trick, or absolute URL.
+  if (!raw.startsWith("/")) return "/library";
+  if (raw.startsWith("//") || raw.startsWith("/\\")) return "/library";
+  // Reject any control chars that some browsers may collapse.
+  if (/[\x00-\x1f]/.test(raw)) return "/library";
+  return raw;
+}
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
-  const next = searchParams.get("next") ?? "/library";
+  const next = safeNext(searchParams.get("next"));
 
   // ── Flow 1: OAuth / PKCE — has `code` ─────────────────────────────────
   const code = searchParams.get("code");
@@ -47,6 +63,7 @@ export async function GET(request: Request) {
   }
 
   // ── Neither flow matched — link is malformed or already used ─────────
+  logSecurityEvent({ kind: "auth_failed", route: "/auth/callback" });
   return NextResponse.redirect(
     `${origin}/login?error=auth_failed&detail=no_code_or_token`,
   );

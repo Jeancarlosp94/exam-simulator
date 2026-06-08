@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { checkRateLimit } from "@/lib/rate-limit";
 import { applySm2, qualityFromCorrectness, type Quality } from "@/lib/srs/sm2";
 import { recordActivity } from "@/lib/streak";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -35,6 +36,19 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  const rl = await checkRateLimit(
+    { prefix: "review-answer", requests: 200, window: "1 h" },
+    user.id,
+  );
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "rate_limited", retry_after_seconds: rl.retryAfterSeconds },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rl.retryAfterSeconds) },
+      },
+    );
   }
 
   let rawBody: unknown;
