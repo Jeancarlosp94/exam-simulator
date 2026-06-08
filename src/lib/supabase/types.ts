@@ -19,6 +19,15 @@ export type Difficulty = "easy" | "medium" | "hard";
 
 export type QuestionOption = { label: string; text: string };
 
+export type ThemePalette = "teal" | "forest" | "sunset" | "lavender";
+export type ThemeMode = "focus" | "relax";
+export type ThemeBrightness = "dark" | "light";
+export type ThemeSettings = {
+  palette: ThemePalette;
+  mode: ThemeMode;
+  brightness: ThemeBrightness;
+};
+
 export type KeyTerm = {
   term: string;
   definition: string;
@@ -48,6 +57,7 @@ export type Database = {
           id: string;
           email: string;
           display_name: string | null;
+          theme_settings: ThemeSettings;
           created_at: string;
           updated_at: string;
         };
@@ -55,10 +65,12 @@ export type Database = {
           id: string;
           email: string;
           display_name?: string | null;
+          theme_settings?: ThemeSettings;
         };
         Update: {
           email?: string;
           display_name?: string | null;
+          theme_settings?: ThemeSettings;
         };
         Relationships: [];
       };

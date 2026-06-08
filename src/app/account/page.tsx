@@ -1,15 +1,19 @@
-import { LogOut, Sparkles, UserRound } from "lucide-react";
+import { LogOut, Palette, Sparkles, UserRound } from "lucide-react";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { SignOutButton } from "@/components/account/sign-out-button";
+import { ThemePicker } from "@/components/account/theme-picker";
 import { PortalButton } from "@/components/billing/portal-button";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getUserPlan } from "@/lib/billing/plan";
+import { parseTheme, THEME_COOKIE } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getSupabaseServiceClient } from "@/lib/supabase/service";
 
 export const metadata = { title: "Cuenta" };
 
@@ -28,6 +32,18 @@ export default async function AccountPage() {
     (user.user_metadata?.name as string | undefined) ??
     user.email ??
     "Cuenta";
+
+  // Prefer the DB value over the cookie so cross-device users always get
+  // their last saved theme; fall back to cookie for first paint or anon.
+  const cookieStore = await cookies();
+  const service = getSupabaseServiceClient();
+  const { data: profile } = await service
+    .from("profiles")
+    .select("theme_settings")
+    .eq("id", user.id)
+    .maybeSingle();
+  const initialTheme =
+    profile?.theme_settings ?? parseTheme(cookieStore.get(THEME_COOKIE)?.value);
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
@@ -89,6 +105,20 @@ export default async function AccountPage() {
           ) : (
             <PortalButton size="sm" />
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="flex flex-col gap-3 py-6">
+          <div className="flex items-center gap-2">
+            <Palette className="size-4 text-primary" />
+            <h2 className="text-sm font-semibold">Apariencia</h2>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Elegí una paleta, el modo (Enfocado para deep work, Relajado para
+            lecturas largas) y el brillo. Los cambios se aplican al instante.
+          </p>
+          <ThemePicker initial={initialTheme} />
         </CardContent>
       </Card>
 

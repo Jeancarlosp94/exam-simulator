@@ -50,84 +50,185 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
- * Quizen palette — teal #14B8A6 + sand #FAFAF9 + soft black #0A0A0A
- * Dark-first (the `dark` class is applied to <html> by default in layout).
- * Light mode tokens kept for a future user-toggleable theme.
- * ─────────────────────────────────────────────────────────────────────── */
+/* ──────────────────────────────────────────────────────────────────────
+ * Quizen theming system — Sprint 12c
+ *
+ * Themes split across three dimensions, all driven by data-attrs +
+ * `dark`/`light` classes on <html>:
+ *
+ *   data-palette   teal | forest | sunset | lavender  → primary hue
+ *   data-mode      focus | relax                      → saturation + tint
+ *   .dark / .light (class)                            → lightness scale
+ *
+ * Color tokens are computed via oklch(var(--L) var(--C) var(--H)) so we
+ * only set 3 axes per combo, not 25 manual hex values per. See BRAND.md
+ * for the full token map.
+ *
+ * Why OKLCH: perceptually uniform — changing lightness doesn't shift
+ * apparent hue. Critical for the focus↔relax swap where we keep the same
+ * "color" but adjust chroma.
+ * ──────────────────────────────────────────────────────────────────── */
 
+/* ─── Defaults: teal palette + focus mode + dark brightness ──────── */
 :root {
-  /* Light mode (not active by default — reserved for future toggle) */
-  --background: oklch(0.99 0.003 180);
-  --foreground: oklch(0.18 0.012 240);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.012 240);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.012 240);
-  --primary: oklch(0.62 0.13 188);
-  --primary-foreground: oklch(0.99 0.003 180);
-  --secondary: oklch(0.96 0.005 180);
-  --secondary-foreground: oklch(0.22 0.012 240);
-  --muted: oklch(0.96 0.005 180);
-  --muted-foreground: oklch(0.45 0.01 240);
-  --accent: oklch(0.94 0.02 188);
-  --accent-foreground: oklch(0.22 0.012 240);
-  --destructive: oklch(0.62 0.21 27);
-  --border: oklch(0.18 0.012 240 / 10%);
-  --input: oklch(0.18 0.012 240 / 12%);
-  --ring: oklch(0.62 0.13 188);
-  --chart-1: oklch(0.62 0.13 188);
-  --chart-2: oklch(0.72 0.12 95);
-  --chart-3: oklch(0.55 0.18 25);
-  --chart-4: oklch(0.5 0.15 280);
-  --chart-5: oklch(0.6 0.11 145);
-  --radius: 0.625rem;
-  --quizen-teal: oklch(0.72 0.14 188);
-  --quizen-sand: oklch(0.97 0.005 90);
-  --sidebar: oklch(0.99 0.003 180);
-  --sidebar-foreground: oklch(0.18 0.012 240);
-  --sidebar-primary: oklch(0.62 0.13 188);
-  --sidebar-primary-foreground: oklch(0.99 0.003 180);
-  --sidebar-accent: oklch(0.94 0.02 188);
-  --sidebar-accent-foreground: oklch(0.22 0.012 240);
-  --sidebar-border: oklch(0.18 0.012 240 / 10%);
-  --sidebar-ring: oklch(0.62 0.13 188);
-}
+  /* Palette hues (teal default; overridden by [data-palette]) */
+  --hue-primary: 188;
+  --hue-accent: 145;
 
-.dark {
-  --background: oklch(0.14 0.008 240);
-  --foreground: oklch(0.97 0.005 180);
-  --card: oklch(0.19 0.01 240);
-  --card-foreground: oklch(0.97 0.005 180);
-  --popover: oklch(0.19 0.01 240);
-  --popover-foreground: oklch(0.97 0.005 180);
-  --primary: oklch(0.74 0.14 188);
-  --primary-foreground: oklch(0.14 0.008 240);
-  --secondary: oklch(0.24 0.012 240);
-  --secondary-foreground: oklch(0.97 0.005 180);
-  --muted: oklch(0.22 0.01 240);
-  --muted-foreground: oklch(0.7 0.012 220);
-  --accent: oklch(0.28 0.04 188);
-  --accent-foreground: oklch(0.97 0.005 180);
+  /* Mode-controlled (focus default) — chroma multipliers + warm shift */
+  --chroma-bg: 0.008;
+  --chroma-fg: 0.005;
+  --chroma-muted: 0.012;
+  --chroma-primary: 0.14;
+  --chroma-accent: 0.04;
+  --hue-tint-bg: var(--hue-tint-cool); /* focus = cool tint */
+
+  /* Brightness-controlled (dark default) — lightness scale */
+  --L-bg: 0.14;
+  --L-card: 0.19;
+  --L-popover: 0.19;
+  --L-sidebar: 0.16;
+  --L-secondary: 0.24;
+  --L-muted: 0.22;
+  --L-muted-fg: 0.7;
+  --L-fg: 0.97;
+  --L-primary: 0.74;
+  --L-primary-fg: 0.14;
+  --L-accent: 0.28;
+  --L-border-alpha: 8%;
+  --L-input-alpha: 12%;
+
+  /* Hue tints for surfaces — picked per mode */
+  --hue-tint-cool: 240;
+  --hue-tint-warm: 75;
+
+  /* Shared static tokens */
+  --radius: 0.625rem;
+  --quizen-teal: oklch(0.74 0.14 188);
+  --quizen-sand: oklch(0.97 0.005 90);
   --destructive: oklch(0.7 0.19 22);
-  --border: oklch(0.97 0.005 180 / 8%);
-  --input: oklch(0.97 0.005 180 / 12%);
-  --ring: oklch(0.74 0.14 188);
+
+  /* ── Derived tokens — never set these per palette/mode/brightness ── */
+  --background: oklch(var(--L-bg) var(--chroma-bg) var(--hue-tint-bg));
+  --foreground: oklch(var(--L-fg) var(--chroma-fg) var(--hue-tint-bg));
+  --card: oklch(var(--L-card) var(--chroma-bg) var(--hue-tint-bg));
+  --card-foreground: oklch(var(--L-fg) var(--chroma-fg) var(--hue-tint-bg));
+  --popover: oklch(var(--L-popover) var(--chroma-bg) var(--hue-tint-bg));
+  --popover-foreground: oklch(var(--L-fg) var(--chroma-fg) var(--hue-tint-bg));
+  --primary: oklch(var(--L-primary) var(--chroma-primary) var(--hue-primary));
+  --primary-foreground: oklch(
+    var(--L-primary-fg) var(--chroma-bg) var(--hue-tint-bg)
+  );
+  --secondary: oklch(var(--L-secondary) var(--chroma-muted) var(--hue-tint-bg));
+  --secondary-foreground: oklch(
+    var(--L-fg) var(--chroma-fg) var(--hue-tint-bg)
+  );
+  --muted: oklch(var(--L-muted) var(--chroma-bg) var(--hue-tint-bg));
+  --muted-foreground: oklch(
+    var(--L-muted-fg) var(--chroma-muted) var(--hue-tint-bg)
+  );
+  --accent: oklch(var(--L-accent) var(--chroma-accent) var(--hue-primary));
+  --accent-foreground: oklch(var(--L-fg) var(--chroma-fg) var(--hue-tint-bg));
+  --border: oklch(
+    var(--L-fg) var(--chroma-fg) var(--hue-tint-bg) / var(--L-border-alpha)
+  );
+  --input: oklch(
+    var(--L-fg) var(--chroma-fg) var(--hue-tint-bg) / var(--L-input-alpha)
+  );
+  --ring: oklch(var(--L-primary) var(--chroma-primary) var(--hue-primary));
+
+  /* Chart colors — keep stable across palettes for data-viz consistency */
   --chart-1: oklch(0.74 0.14 188);
   --chart-2: oklch(0.78 0.13 95);
   --chart-3: oklch(0.68 0.18 25);
   --chart-4: oklch(0.65 0.16 280);
   --chart-5: oklch(0.7 0.13 145);
-  --quizen-teal: oklch(0.74 0.14 188);
-  --quizen-sand: oklch(0.97 0.005 90);
-  --sidebar: oklch(0.16 0.01 240);
-  --sidebar-foreground: oklch(0.97 0.005 180);
-  --sidebar-primary: oklch(0.74 0.14 188);
-  --sidebar-primary-foreground: oklch(0.14 0.008 240);
-  --sidebar-accent: oklch(0.24 0.012 240);
-  --sidebar-accent-foreground: oklch(0.97 0.005 180);
-  --sidebar-border: oklch(0.97 0.005 180 / 8%);
-  --sidebar-ring: oklch(0.74 0.14 188);
+
+  /* Sidebar — same recipe as base surfaces but slightly different L */
+  --sidebar: oklch(var(--L-sidebar) var(--chroma-bg) var(--hue-tint-bg));
+  --sidebar-foreground: oklch(var(--L-fg) var(--chroma-fg) var(--hue-tint-bg));
+  --sidebar-primary: oklch(
+    var(--L-primary) var(--chroma-primary) var(--hue-primary)
+  );
+  --sidebar-primary-foreground: oklch(
+    var(--L-primary-fg) var(--chroma-bg) var(--hue-tint-bg)
+  );
+  --sidebar-accent: oklch(
+    var(--L-secondary) var(--chroma-muted) var(--hue-tint-bg)
+  );
+  --sidebar-accent-foreground: oklch(
+    var(--L-fg) var(--chroma-fg) var(--hue-tint-bg)
+  );
+  --sidebar-border: oklch(
+    var(--L-fg) var(--chroma-fg) var(--hue-tint-bg) / var(--L-border-alpha)
+  );
+  --sidebar-ring: oklch(
+    var(--L-primary) var(--chroma-primary) var(--hue-primary)
+  );
+}
+
+/* ─── Brightness: Light ───────────────────────────────────────────── */
+:root:not(.dark) {
+  --L-bg: 0.99;
+  --L-card: 1;
+  --L-popover: 1;
+  --L-sidebar: 0.99;
+  --L-secondary: 0.96;
+  --L-muted: 0.96;
+  --L-muted-fg: 0.45;
+  --L-fg: 0.18;
+  --L-primary: 0.62;
+  --L-primary-fg: 0.99;
+  --L-accent: 0.94;
+  --L-border-alpha: 10%;
+  --L-input-alpha: 12%;
+}
+
+/* ─── Mode: Relax ─────────────────────────────────────────────────────
+ * Warmer tint, lower saturation, slightly softer contrast. Backed by
+ * display-fatigue research: warm-biased low-sat surfaces over long
+ * reading sessions reduce reported eye strain (Sheedy 2003, multiple
+ * follow-ups). The contrast remains WCAG AA, not AAA — relax mode
+ * isn't for fine-detail tasks.
+ * ────────────────────────────────────────────────────────────────── */
+[data-mode="relax"] {
+  --hue-tint-bg: var(--hue-tint-warm);
+  --chroma-bg: 0.012;
+  --chroma-fg: 0.008;
+  --chroma-muted: 0.018;
+  --chroma-primary: 0.09;
+  --chroma-accent: 0.03;
+}
+
+/* Slight L tweaks under relax-dark to avoid muddy surfaces */
+[data-mode="relax"].dark {
+  --L-bg: 0.16;
+  --L-card: 0.21;
+  --L-sidebar: 0.18;
+  --L-fg: 0.92;
+  --L-muted-fg: 0.65;
+}
+
+/* Relax-light: softer black, off-white background */
+[data-mode="relax"]:not(.dark) {
+  --L-bg: 0.97;
+  --L-fg: 0.22;
+}
+
+/* ─── Palette overrides — each just shifts the primary hue ──────── */
+[data-palette="forest"] {
+  --hue-primary: 145;
+  --hue-accent: 188;
+}
+
+[data-palette="sunset"] {
+  --hue-primary: 35;
+  --hue-accent: 280;
+}
+
+[data-palette="lavender"] {
+  --hue-primary: 280;
+  --hue-accent: 188;
 }
 
 @layer base {

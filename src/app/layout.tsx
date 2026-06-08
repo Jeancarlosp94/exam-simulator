@@ -1,11 +1,14 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { cookies } from "next/headers";
 
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { InstallPrompt } from "@/components/layout/install-prompt";
+import { ModeToggle } from "@/components/layout/mode-toggle";
 import { SwRegister } from "@/components/pwa/sw-register";
 import { Toaster } from "@/components/ui/sonner";
 import { optionalEnv } from "@/lib/env";
+import { parseTheme, THEME_COOKIE } from "@/lib/theme";
 
 import "./globals.css";
 
@@ -105,19 +108,28 @@ export const viewport: Viewport = {
   interactiveWidget: "resizes-content",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Read the theme cookie server-side so the first paint has the right
+  // palette/mode/brightness — no flash, no client-side correction.
+  const cookieStore = await cookies();
+  const theme = parseTheme(cookieStore.get(THEME_COOKIE)?.value);
+  const brightnessClass = theme.brightness === "dark" ? "dark" : "light";
+
   return (
     <html
       lang="es"
-      className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      data-palette={theme.palette}
+      data-mode={theme.mode}
+      className={`${brightnessClass} ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col pb-16 sm:pb-0">
         {children}
         <Toaster richColors closeButton position="top-right" />
+        <ModeToggle />
         <BottomNav />
         <InstallPrompt />
         <SwRegister />
